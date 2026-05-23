@@ -178,7 +178,7 @@ mod tests {
         let state = make_state(vec![(SubmoduleStatus::Clean, "lib-a")]);
         let script = generate_ci_script(&state, "github");
         assert!(script.contains("name: Update Submodules"));
-        assert!(script.contains("kse status"));
+        assert!(script.contains("qtcloud-devops code status"));
         assert!(!script.contains("submodule update"));
     }
 
