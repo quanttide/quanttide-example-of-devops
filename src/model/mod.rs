@@ -235,6 +235,8 @@ fn count_between(
 mod tests {
     use super::*;
 
+    // ---- SubmoduleStatus ----
+
     #[test]
     fn test_status_priority_ordering() {
         assert!(SubmoduleStatus::Dirty.priority() < SubmoduleStatus::Clean.priority());
@@ -259,11 +261,66 @@ mod tests {
     }
 
     #[test]
+    fn test_all_priorities_are_unique() {
+        let priorities: Vec<u8> = [
+            SubmoduleStatus::Dirty,
+            SubmoduleStatus::Orphaned,
+            SubmoduleStatus::Detached,
+            SubmoduleStatus::Uninitialized,
+            SubmoduleStatus::BehindRemote,
+            SubmoduleStatus::AheadOfParent,
+            SubmoduleStatus::Clean,
+        ]
+        .iter()
+        .map(|s| s.priority())
+        .collect();
+        let mut sorted = priorities.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(priorities.len(), sorted.len(), "priorities must be unique");
+    }
+
+    #[test]
+    fn test_status_debug_output() {
+        assert_eq!(format!("{:?}", SubmoduleStatus::Clean), "Clean");
+        assert_eq!(format!("{:?}", SubmoduleStatus::Dirty), "Dirty");
+        assert_eq!(format!("{:?}", SubmoduleStatus::Detached), "Detached");
+        assert_eq!(format!("{:?}", SubmoduleStatus::Orphaned), "Orphaned");
+        assert_eq!(format!("{:?}", SubmoduleStatus::Uninitialized), "Uninitialized");
+        assert_eq!(format!("{:?}", SubmoduleStatus::AheadOfParent), "AheadOfParent");
+        assert_eq!(format!("{:?}", SubmoduleStatus::BehindRemote), "BehindRemote");
+    }
+
+    #[test]
+    fn test_status_clone_eq() {
+        let a = SubmoduleStatus::Dirty;
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
+
+    // ---- CommitHash ----
+
+    #[test]
     fn test_commit_hash_display_truncates() {
         let hash = CommitHash("abcdef1234567890".to_string());
         let display = format!("{}", hash);
         assert_eq!(display.len(), 7);
         assert_eq!(display, "abcdef1");
+    }
+
+    #[test]
+    fn test_commit_hash_display_short() {
+        let hash = CommitHash("abc".to_string());
+        let display = format!("{}", hash);
+        assert_eq!(display.len(), 3);
+        assert_eq!(display, "abc");
+    }
+
+    #[test]
+    fn test_commit_hash_display_empty() {
+        let hash = CommitHash(String::new());
+        let display = format!("{}", hash);
+        assert_eq!(display, "");
     }
 
     #[test]
@@ -273,5 +330,97 @@ mod tests {
         let c = CommitHash("def".to_string());
         assert_eq!(a, b);
         assert_ne!(a, c);
+    }
+
+    #[test]
+    fn test_commit_hash_default() {
+        let d = CommitHash::default();
+        assert_eq!(d.0, "0000000000000000000000000000000000000000");
+        assert_eq!(d.to_string(), "0000000");
+    }
+
+    #[test]
+    fn test_commit_hash_clone() {
+        let a = CommitHash("deadbeef".to_string());
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
+
+    // ---- Submodule ----
+
+    #[test]
+    fn test_submodule_builder() {
+        let sm = Submodule {
+            name: "test".into(),
+            path: PathBuf::from("libs/test"),
+            url: "https://example.com/test.git".into(),
+            tracked_branch: "main".into(),
+            parent_pointer: CommitHash("aaa".into()),
+            local_head: CommitHash("bbb".into()),
+            remote_head: CommitHash("ccc".into()),
+            status: SubmoduleStatus::BehindRemote,
+            ahead_count: 0,
+            behind_count: 3,
+        };
+        assert_eq!(sm.name, "test");
+        assert_eq!(sm.behind_count, 3);
+        assert_eq!(format!("{:?}", sm.status), "BehindRemote");
+    }
+
+    // ---- RepoState ----
+
+    #[test]
+    fn test_repo_state_empty() {
+        let state = RepoState {
+            root_path: PathBuf::from("/tmp"),
+            submodules: vec![],
+            total: 0,
+            clean_count: 0,
+            needs_attention: vec![],
+        };
+        assert_eq!(state.total, 0);
+        assert!(state.needs_attention.is_empty());
+    }
+
+    #[test]
+    fn test_repo_state_with_mixed_status() {
+        let submodules = vec![
+            Submodule {
+                name: "clean-one".into(),
+                path: PathBuf::from("a"),
+                url: String::new(),
+                tracked_branch: "main".into(),
+                parent_pointer: CommitHash::default(),
+                local_head: CommitHash::default(),
+                remote_head: CommitHash::default(),
+                status: SubmoduleStatus::Clean,
+                ahead_count: 0,
+                behind_count: 0,
+            },
+            Submodule {
+                name: "dirty-one".into(),
+                path: PathBuf::from("b"),
+                url: String::new(),
+                tracked_branch: "main".into(),
+                parent_pointer: CommitHash::default(),
+                local_head: CommitHash::default(),
+                remote_head: CommitHash::default(),
+                status: SubmoduleStatus::Dirty,
+                ahead_count: 0,
+                behind_count: 0,
+            },
+        ];
+
+        let total = submodules.len();
+        let clean_count = submodules.iter().filter(|s| s.status == SubmoduleStatus::Clean).count();
+        let needs_attention: Vec<String> = submodules
+            .iter()
+            .filter(|s| s.status != SubmoduleStatus::Clean)
+            .map(|s| s.name.clone())
+            .collect();
+
+        assert_eq!(total, 2);
+        assert_eq!(clean_count, 1);
+        assert_eq!(needs_attention, vec!["dirty-one"]);
     }
 }

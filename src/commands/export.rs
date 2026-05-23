@@ -98,6 +98,119 @@ fn generate_gitlab_ci(
     s
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_state(submodules: Vec<(SubmoduleStatus, &str)>) -> RepoState {
+        RepoState {
+            root_path: "/tmp/repo".into(),
+            submodules: submodules
+                .into_iter()
+                .map(|(status, name)| Submodule {
+                    name: name.into(),
+                    path: PathBuf::from(name),
+                    url: format!("https://example.com/{}.git", name),
+                    tracked_branch: "main".into(),
+                    parent_pointer: CommitHash::default(),
+                    local_head: CommitHash::default(),
+                    remote_head: CommitHash::default(),
+                    status,
+                    ahead_count: 0,
+                    behind_count: 0,
+                })
+                .collect(),
+            total: submodules.len() as usize,
+            clean_count: submodules.iter().filter(|(s, _)| *s == SubmoduleStatus::Clean).count(),
+            needs_attention: submodules
+                .iter()
+                .filter(|(s, _)| *s != SubmoduleStatus::Clean)
+                .map(|(_, n)| n.to_string())
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn test_shell_script_with_updates() {
+        let state = make_state(vec![
+            (SubmoduleStatus::Clean, "lib-clean"),
+            (SubmoduleStatus::BehindRemote, "lib-behind"),
+            (SubmoduleStatus::Uninitialized, "lib-new"),
+        ]);
+        let script = generate_ci_script(&state, "shell");
+        assert!(script.starts_with("#!/bin/bash"));
+        assert!(script.contains("lib-behind"));
+        assert!(script.contains("lib-new"));
+        assert!(script.contains("kse sync-all"));
+        assert!(!script.contains("lib-clean"));
+    }
+
+    #[test]
+    fn test_shell_script_all_clean() {
+        let state = make_state(vec![
+            (SubmoduleStatus::Clean, "lib-a"),
+            (SubmoduleStatus::Clean, "lib-b"),
+        ]);
+        let script = generate_ci_script(&state, "shell");
+        assert!(script.starts_with("#!/bin/bash"));
+        assert!(script.contains("已是最新"));
+        assert!(!script.contains("kse sync-all"));
+    }
+
+    #[test]
+    fn test_github_actions_format() {
+        let state = make_state(vec![
+            (SubmoduleStatus::BehindRemote, "lib-x"),
+        ]);
+        let script = generate_ci_script(&state, "github");
+        assert!(script.contains("name: Update Submodules"));
+        assert!(script.contains("actions/checkout@v4"));
+        assert!(script.contains("lib-x"));
+        assert!(script.contains("cargo build --release"));
+    }
+
+    #[test]
+    fn test_github_actions_all_clean() {
+        let state = make_state(vec![
+            (SubmoduleStatus::Clean, "lib-a"),
+        ]);
+        let script = generate_ci_script(&state, "github");
+        assert!(script.contains("name: Update Submodules"));
+        assert!(script.contains("health-check"));
+        assert!(!script.contains("update "));
+    }
+
+    #[test]
+    fn test_gitlab_ci_format() {
+        let state = make_state(vec![
+            (SubmoduleStatus::BehindRemote, "lib-y"),
+        ]);
+        let script = generate_ci_script(&state, "gitlab");
+        assert!(script.contains("stages:"));
+        assert!(script.contains("update-submodules:"));
+        assert!(script.contains("lib-y"));
+        assert!(script.contains("schedules"));
+    }
+
+    #[test]
+    fn test_all_formats_produce_output() {
+        let state = make_state(vec![
+            (SubmoduleStatus::BehindRemote, "lib-z"),
+        ]);
+        for fmt in &["shell", "github", "gitlab"] {
+            let script = generate_ci_script(&state, fmt);
+            assert!(!script.is_empty(), "format {} should produce output", fmt);
+        }
+    }
+
+    #[test]
+    fn test_default_format_is_shell() {
+        let state = make_state(vec![]);
+        let script = generate_ci_script(&state, "unknown");
+        assert!(script.starts_with("#!/bin/bash"));
+    }
+}
+
 fn timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let d = SystemTime::now()

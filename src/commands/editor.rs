@@ -293,7 +293,60 @@ impl SubmoduleEditor for GitSubmoduleEditor {
     }
 }
 
-fn describe_issue(status: &SubmoduleStatus) -> (String, String) {
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_describe_issue_ahead_of_parent() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::AheadOfParent);
+        assert!(desc.contains("领先"));
+        assert!(action.contains("sync"));
+    }
+
+    #[test]
+    fn test_describe_issue_behind_remote() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::BehindRemote);
+        assert!(desc.contains("落后"));
+        assert!(action.contains("update"));
+    }
+
+    #[test]
+    fn test_describe_issue_detached() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::Detached);
+        assert!(desc.contains("游离"));
+        assert!(action.contains("checkout"));
+    }
+
+    #[test]
+    fn test_describe_issue_dirty() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::Dirty);
+        assert!(desc.contains("修改"));
+        assert!(action.contains("提交") || action.contains("stash"));
+    }
+
+    #[test]
+    fn test_describe_issue_orphaned() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::Orphaned);
+        assert!(desc.contains("不存在"));
+        assert!(action.contains("手动"));
+    }
+
+    #[test]
+    fn test_describe_issue_uninitialized() {
+        let (desc, action) = describe_issue(&SubmoduleStatus::Uninitialized);
+        assert!(desc.contains("初始化"));
+        assert!(action.contains("init"));
+    }
+
+    #[test]
+    #[should_panic(expected = "unreachable")]
+    fn test_describe_issue_clean_panics() {
+        describe_issue(&SubmoduleStatus::Clean);
+    }
+}
+
+pub(crate) fn describe_issue(status: &SubmoduleStatus) -> (String, String) {
     match status {
         SubmoduleStatus::AheadOfParent => (
             "本地领先于父仓库记录".into(),

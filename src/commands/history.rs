@@ -117,3 +117,115 @@ impl HistoryDb {
         Ok(records)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_db() -> (tempfile::TempDir, HistoryDb) {
+        let tmp = tempfile::tempdir().unwrap();
+        let db = HistoryDb::open(tmp.path()).unwrap();
+        (tmp, db)
+    }
+
+    #[test]
+    fn test_open_creates_db_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        HistoryDb::open(tmp.path()).unwrap();
+        let db_path = tmp.path().join(".git").join("kse").join("history.db");
+        assert!(db_path.exists(), "DB file should be created");
+    }
+
+    #[test]
+    fn test_log_and_list_operation() {
+        let (_tmp, db) = temp_db();
+        db.log_operation("update", "lib-a", "updated to latest", true).unwrap();
+        let records = db.list_operations(10, None).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].action, "update");
+        assert_eq!(records[0].submodule_name, "lib-a");
+        assert!(records[0].success);
+    }
+
+    #[test]
+    fn test_log_failure() {
+        let (_tmp, db) = temp_db();
+        db.log_operation("sync", "lib-b", "network error", false).unwrap();
+        let records = db.list_operations(10, None).unwrap();
+        assert_eq!(records.len(), 1);
+        assert!(!records[0].success);
+    }
+
+    #[test]
+    fn test_list_operations_limit() {
+        let (_tmp, db) = temp_db();
+        for i in 0..5 {
+            db.log_operation("update", &format!("lib-{}", i), "", true).unwrap();
+        }
+        let all = db.list_operations(10, None).unwrap();
+        assert_eq!(all.len(), 5);
+        let limited = db.list_operations(2, None).unwrap();
+        assert_eq!(limited.len(), 2);
+    }
+
+    #[test]
+    fn test_list_operations_filter_by_submodule() {
+        let (_tmp, db) = temp_db();
+        db.log_operation("update", "lib-a", "", true).unwrap();
+        db.log_operation("sync", "lib-b", "", true).unwrap();
+        db.log_operation("update", "lib-a", "", true).unwrap();
+
+        let records = db.list_operations(10, Some("lib-a")).unwrap();
+        assert_eq!(records.len(), 2);
+        for r in &records {
+            assert_eq!(r.submodule_name, "lib-a");
+        }
+    }
+
+    #[test]
+    fn test_list_operations_filter_no_match() {
+        let (_tmp, db) = temp_db();
+        db.log_operation("update", "lib-a", "", true).unwrap();
+        let records = db.list_operations(10, Some("nonexistent")).unwrap();
+        assert_eq!(records.len(), 0);
+    }
+
+    #[test]
+    fn test_log_retire() {
+        let (_tmp, db) = temp_db();
+        db.log_retire("old-lib", "https://example.com/old.git", "libs/old", "no longer needed")
+            .unwrap();
+
+        let ops = db.list_operations(10, None).unwrap();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].action, "retire");
+        assert_eq!(ops[0].submodule_name, "old-lib");
+
+        let count: i64 = db
+            .db
+            .query_row("SELECT COUNT(*) FROM retired_submodules WHERE name = ?1", ["old-lib"], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_empty_history() {
+        let (_tmp, db) = temp_db();
+        let records = db.list_operations(10, None).unwrap();
+        assert!(records.is_empty());
+    }
+
+    #[test]
+    fn test_multiple_operations_order() {
+        let (_tmp, db) = temp_db();
+        db.log_operation("add", "a", "", true).unwrap();
+        db.log_operation("update", "b", "", true).unwrap();
+        db.log_operation("retire", "c", "", true).unwrap();
+
+        let records = db.list_operations(10, None).unwrap();
+        assert_eq!(records.len(), 3);
+        assert_eq!(records[0].action, "retire");
+        assert_eq!(records[2].action, "add");
+    }
+}
+
