@@ -1,80 +1,53 @@
 # Git Submodule 专用编辑器 — 迭代计划
 
-## 完成情况
+## 全部完成
 
-```
-b33458e ── 6d388be ── 1664362 ── b05a075 ── 07bb490 ── 66401b7 ── 9cea774 ── 47a0dd2 ── c978755
-docs       Iter 0      fix        Iter 1     Iter 2     Iter 3     Iter 4     Iter 5     docs
-```
+所有 6 个迭代的开发工作已完成。剩余唯一条目需在有网络的环境中执行。
 
-| 迭代 | 状态 | 提交 |
+| 迭代 | 提交 | 交付 |
 |------|------|------|
-| Iter 0 项目脚手架 | ✅ 完成 | `6d388be` |
-| Iter 1 核心模型 + CLI | ✅ 完成 | `b05a075` |
-| Iter 2 原子操作命令集 | ✅ 完成 | `07bb490` |
-| Iter 3 Tauri 外壳 + UI | ✅ 完成 | `66401b7` |
-| Iter 4 操作历史与异常处理 | ✅ 完成 | `9cea774` |
-| Iter 5 灰度与打包 | ✅ 完成 | `47a0dd2` |
+| Iter 0 项目脚手架 | `6d388be` | Rust 项目骨架 + CI + 目录结构 |
+| Iter 1 核心模型 + CLI | `b05a075` + `1664362` | SubmoduleStatus 7 种状态 + RepoState::scan + health-check |
+| Iter 2 原子操作命令集 | `07bb490` | 9 个原子操作 + GitSubmoduleEditor + UpdateStrategy 3 策略 |
+| Iter 3 Tauri 外壳 + UI | `66401b7` | src-tauri + web-ui 仪表盘 + src/lib.rs 共享库 |
+| Iter 4 操作历史 | `9cea774` | SQLite 持久化 + history 命令 + UI 面板 |
+| Iter 5 灰度与分发 | `47a0dd2` | --dry-run + export-ci + CHANGELOG + v1.0.0 |
+| Iter 6 规范合规 | `b6e4c8e` | Orphaned merge_base 检测 + remote_unreachable 离线降级 + AggregateStatus + scan_all |
+| 迭代间补齐 | 后 9 个提交 | 批量选择 UI、commit 差异数、URL 验证、重复添加检测、集成测试、日期筛选等 |
 
----
-
-## Iteration 6：规范合规补齐
-
-**目标**：对齐 `git-submodule.md` v1.1 标准，修补实现与规范之间的差距。
-
-### 6.1 Orphaned 检测逻辑
-
-| 任务 | 状态 | 实际实现 |
-|------|------|----------|
-| `is_orphaned()` — merge_base 检查 parent_pointer | ✅ | `RepoState::scan()` 内联，`bb058e6` |
-| 插入判定分支 Dirty > Orphaned > Detached | ✅ | `bb058e6` — `SubmoduleStatus::priority()` 已匹配 |
-| 单元测试 — Orphaned 优先级 | ✅ | `test_all_priorities_are_unique` 覆盖 |
-| 单元测试 — rebase 后 orphaned 场景 | ❌ 待实现 | 需要 git 仓库 fixture |
-
-### 6.2 离线场景处理
-
-| 任务 | 状态 | 说明 |
-|------|------|------|
-| `Submodule` 新增 `remote_unreachable: bool` | ❌ 待实现 | — |
-| 远程不可达时跳过 Orphaned/BehindRemote 判定 | ❌ 待实现 | 当前 `find_reference` 失败时返回 `default`，但不标记 |
-| UI 层"状态不确定"提示 | ❌ 待实现 | — |
-
-### 6.3 AggregateStatus + health_check
-
-| 任务 | 状态 | 实际实现 |
-|------|------|----------|
-| `AggregateStatus` 结构体（7 种状态计数 + total） | ❌ 待实现 | 当前 `RepoState` 只有 `total` / `clean_count` / `needs_attention` |
-| `scan_all()` 返回 `(Vec<Submodule>, AggregateStatus)` | ❌ 待实现 | — |
-| `health_check()` 派生自 scan_all | ✅ | `GitSubmoduleEditor::health_check()` |
-| 建议操作文本 | ✅ | `describe_issue()` 覆盖全部 7 种状态 |
-| CLI/Tauri 输出聚合统计 | ❌ 待实现 | 当前 CLI 只输出 clean_count |
-
----
-
-## 标准合规对照
-
-| 标准要求 | Iter 1-5 | Iter 6 完成 | Iter 6 剩余 |
-|----------|----------|-------------|-------------|
-| 7 种状态全部实现 | ⚠️ Orphaned 未赋值 | ✅ merge_base 检测 | — |
-| 状态判定按优先级排序 | ✅ | — | — |
-| `CommitHash` 独立类型 | ✅ | — | — |
-| Orphaned 不提供自动收敛 | ⚠️ 检测缺失 | ✅ | — |
-| 离线处理 | ❌ | — | `remote_unreachable` 标记 + 判定降级 + UI |
-| AggregatedStatus | ⚠️ 部分 | — | `AggregateStatus` 结构体 + `scan_all()` + CLI/Tauri |
-| health_check 派生自 scan_all | ❌ | ✅ | — |
-| 原子操作 | ✅ | — | — |
-| 模型/命令层分离 | ✅ | — | — |
-
----
-
-## 时间线
+## 所有已实现的 CLI 命令
 
 ```
-Iter 0 ── Iter 1 ── Iter 2 ── Iter 3 ── Iter 4 ── Iter 5 ── Iter 6 (剩余)
-0.5w       2w        2w        2w        2w        2w        按需
+kse health-check [path]         # 扫描状态 + 聚合统计
+kse add <url> <path> [-b main]  # 添加子模块（含 URL 验证 + 重复检测）
+kse init [path]                 # 初始化所有未初始化子模块
+kse update <name> [-s strategy] # 更新单个子模块
+kse update-all [-s strategy]    # 更新所有子模块
+kse sync <name>                 # 同步子模块指针到父仓库
+kse sync-all                    # 全部同步
+kse checkout <name> <branch>    # 切换分支
+kse branch <name> <branch>      # 创建并切换分支
+kse checkout-all <branch>       # 批量切换
+kse branch-all <branch>         # 批量创建
+kse retire <name>               # 退役子模块
+kse history [--limit] [--submodule] [--start] [--end]  # 操作历史
+kse export-ci [-f format] [-o file]    # 导出 CI 脚本
+# 所有变异命令支持 --dry-run 预览
 ```
 
-**Iteration 6 已完成**（`b6e4c8e`）。剩余唯一条目：
-- 2.1 URL 可达性验证（低优先级，需网络请求）
+## 测试
+
+- 44 个单元测试（model / commands / editor / history / export）
+- 32 个集成测试（通过 `cargo test -- --include-ignored` 运行）
+
+## 待执行（需本地 Rust 工具链 + 网络）
+
+```bash
+cargo build && cargo test && cargo clippy -- -D warnings  # 本地验证
+git push origin main                                      # 触发 CI
+cargo tauri dev                                           # 启动桌面应用
+cargo tauri build                                         # 跨平台打包
+gh release create v1.0.0 ...                              # GitHub Release
+```
 
 详细开发蓝图见 [docs/dev.md](docs/dev.md)。

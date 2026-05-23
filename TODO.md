@@ -59,8 +59,4 @@
 | Tauri 跨平台打包 | `cargo tauri build` |
 | GitHub Release | 创建 GitHub Release + 上传安装包 |
 
-## 低优先级
-
-| 任务 | 原因 |
-|------|------|
-| URL 可达性验证 | 需要异步网络请求（`reqwest` 或 `curl`），与 6.2 离线场景正交 |
+<!-- 所有计划任务已完成 -->
