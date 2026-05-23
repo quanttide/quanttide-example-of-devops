@@ -9,6 +9,12 @@ impl std::fmt::Display for CommitHash {
     }
 }
 
+impl Default for CommitHash {
+    fn default() -> Self {
+        Self(String::from("0000000000000000000000000000000000000000"))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubmoduleStatus {
     Clean,
@@ -79,30 +85,76 @@ impl RepoState {
 
         for sm in &git_submodules {
             let name = sm.name().unwrap_or("unknown").to_string();
-            let path = sm.path().to_path_buf();
+            let sm_path = sm.path();
+            let full_sm_path = root.join(sm_path);
             let url = sm.url().unwrap_or("").to_string();
             let branch = sm.branch().unwrap_or("main").to_string();
 
-            let head_id = repo.find_submodule(&name)?.head_id();
-            let status = sm.status(false)?;
+            let raw_status = sm.status(false)?;
+            let is_uninitialized =
+                raw_status.contains(git2::SubmoduleStatus::WD_UNINITIALIZED);
+            let is_dirty = raw_status.contains(git2::SubmoduleStatus::WD_DIRTY);
 
-            let submodule_status = if status.contains(git2::SubmoduleStatus::WD_UNINITIALIZED) {
+            // 父仓库记录的 commit
+            let parent_pointer = CommitHash(sm.head_id().to_string());
+
+            // 子模块本地 HEAD 和远程 HEAD
+            let (local_head, remote_head, is_detached) = if is_uninitialized {
+                (CommitHash::default(), CommitHash::default(), false)
+            } else {
+                match git2::Repository::open(&full_sm_path) {
+                    Ok(sub_repo) => {
+                        let local = sub_repo
+                            .head()
+                            .ok()
+                            .and_then(|r| r.target())
+                            .map(|o| CommitHash(o.to_string()))
+                            .unwrap_or_default();
+
+                        let detached = sub_repo
+                            .head()
+                            .ok()
+                            .map(|r| !r.is_branch())
+                            .unwrap_or(false);
+
+                        let remote = sub_repo
+                            .find_reference(&format!("refs/remotes/origin/{}", branch))
+                            .ok()
+                            .and_then(|r| r.target())
+                            .map(|o| CommitHash(o.to_string()))
+                            .unwrap_or_default();
+
+                        (local, remote, detached)
+                    }
+                    Err(_) => (CommitHash::default(), CommitHash::default(), false),
+                }
+            };
+
+            let status = if is_uninitialized {
                 SubmoduleStatus::Uninitialized
-            } else if status.contains(git2::SubmoduleStatus::WD_DIRTY) {
+            } else if is_dirty {
                 SubmoduleStatus::Dirty
+            } else if is_detached {
+                SubmoduleStatus::Detached
+            } else if local_head == parent_pointer && local_head == remote_head {
+                SubmoduleStatus::Clean
+            } else if parent_pointer != local_head && local_head == remote_head {
+                SubmoduleStatus::AheadOfParent
+            } else if remote_head != local_head {
+                SubmoduleStatus::BehindRemote
             } else {
                 SubmoduleStatus::Clean
             };
 
             submodules.push(Submodule {
                 name,
-                path,
+                path: sm_path.to_path_buf(),
                 url,
                 tracked_branch: branch,
-                parent_pointer: CommitHash(head_id.to_string()),
-                local_head: CommitHash(head_id.to_string()),
-                remote_head: CommitHash(head_id.to_string()),
-                status: submodule_status,
+                parent_pointer,
+                local_head,
+                remote_head,
+                status,
             });
         }
 
