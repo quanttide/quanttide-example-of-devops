@@ -77,37 +77,37 @@
 
 ### 2.1 add_submodule
 
-- [ ] `git submodule add <url> <path>` 封装
-- [ ] 验证 URL 可达性
-- [ ] 处理路径冲突（已存在）
-- [ ] 处理重复添加
+- [x] `git submodule add <url> <path>` 封装
+- [ ] 验证 URL 可达性（待完善）
+- [x] 处理路径冲突（已存在）
+- [ ] 处理重复添加（待完善）
 
 ### 2.2 init / update
 
-- [ ] `init_all` — 批量初始化所有未初始化子模块
-- [ ] `update_single` 支持 FastForward 策略
-- [ ] `update_single` 支持 Rebase 策略
-- [ ] `update_single` 支持 Merge 策略
-- [ ] 错误处理：本地有未提交修改时阻止更新
+- [x] `init_all` — 批量初始化所有未初始化子模块
+- [x] `update_single` 支持 FastForward 策略
+- [x] `update_single` 支持 Rebase 策略
+- [x] `update_single` 支持 Merge 策略
+- [x] 错误处理：本地有未提交修改时阻止更新
 
 ### 2.3 sync_to_parent
 
-- [ ] 提交子模块目录的修改
-- [ ] 更新父仓库 commit 指针
-- [ ] `sync_all_to_parent` 批量同步
-- [ ] 跳过已 Clean 的子模块
+- [x] 提交子模块目录的修改
+- [x] 更新父仓库 commit 指针
+- [x] `sync_all_to_parent` 批量同步
+- [ ] 跳过已 Clean 的子模块（待优化）
 
 ### 2.4 retire_submodule
 
-- [ ] `git submodule deinit <name>`
-- [ ] 从 `.gitmodules` 移除条目
+- [x] `git submodule deinit <name>`
+- [x] 从 `.gitmodules` 移除条目
 - [ ] 记录退役信息（时间、原因）→ 预留 SQLite 接口
 
 ### 2.5 checkout / create branch
 
-- [ ] `checkout_branch` — 切换到指定分支
-- [ ] `create_branch` — 创建并切换到新分支
-- [ ] 批量操作支持
+- [x] `checkout_branch` — 切换到指定分支
+- [x] `create_branch` — 创建并切换到新分支
+- [ ] 批量操作支持（待完善）
 
 ### 2.6 集成测试
 
