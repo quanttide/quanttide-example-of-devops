@@ -53,11 +53,28 @@
 
 | 任务 | 命令 | 状态 |
 |------|------|:----:|
-| 本地编译验证 | `cargo build && cargo test && cargo clippy -- -D warnings` | ⏳ |
+| 本地编译验证 | `cargo build && cargo test && cargo clippy -- -D warnings` | ✅ build+test 通过 |
+| Tauri 系统依赖安装 | `sudo apt install libsoup2.4-dev libwebkit2gtk-4.0-dev` | ❌ 需 root |
+| Tauri 命令桥接依赖修复 | `package = "kse"` 添加到 src-tauri/Cargo.toml | ✅ 已提交 |
 | CI 触发验证 | `git push origin main` | ⏳ |
-| Tauri 桌面应用启动 | `cargo tauri dev` | ❌ |
+| Tauri 桌面应用启动 | `cargo tauri dev` | ❌ 卡系统依赖 |
 | Tauri 跨平台打包 | `cargo tauri build` | ❌ |
 | GitHub Release | 创建 GitHub Release + 上传安装包 | ❌ |
+
+## Iteration 8（已完成）
+
+### 8.1 本地编译验证
+
+- [x] `cargo build --release` — 通过
+- [x] `cargo test` — 47 个单元测试全部通过
+- [x] `cargo test -- --include-ignored` — 6 个集成测试通过，30 个需要裸仓库 fixture
+
+### 8.2 Tauri 命令桥接
+
+- [x] 确认 `src-tauri/src/main.rs` 已有全部 12 个 Tauri 命令（`scan_repo`, `health_check`, `init_all`, `update_single`, `update_all`, `sync_to_parent`, `sync_all_to_parent`, `retire_submodule`, `checkout_all`, `branch_all`, `export_ci`, `list_history`）
+- [x] 修复依赖声明：`kse_core = { path = "..", package = "kse" }`
+- [x] 系统依赖问题：需 `sudo apt install libsoup2.4-dev libwebkit2gtk-4.0-dev libgtk-3-dev`
+- [x] 提交 `c84ac97 fix: add package = "kse" to kse_core dependency in src-tauri Cargo.toml`
 
 ## Iteration 7（已完成）
 
