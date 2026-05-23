@@ -24,53 +24,59 @@ docs       Iter 0      fix        Iter 1     Iter 2     Iter 3     Iter 4     It
 
 ### 6.1 Orphaned 检测逻辑
 
-| 任务 | 说明 |
-|------|------|
-| 实现 `is_orphaned()` 函数 | 检查 `parent_pointer` 在远程是否仍存在（通过 `revwalk` 或 `odb.exists()`） |
-| 插入判定分支 | 在 `Dirty` 之后、`Detached` 之前插入 `Orphaned` 判定 |
-| 单元测试 | 模拟远程分支 rebase 后被删除的场景 |
+| 任务 | 状态 | 实际实现 |
+|------|------|----------|
+| `is_orphaned()` — merge_base 检查 parent_pointer | ✅ | `RepoState::scan()` 内联，`bb058e6` |
+| 插入判定分支 Dirty > Orphaned > Detached | ✅ | `bb058e6` — `SubmoduleStatus::priority()` 已匹配 |
+| 单元测试 — Orphaned 优先级 | ✅ | `test_all_priorities_are_unique` 覆盖 |
+| 单元测试 — rebase 后 orphaned 场景 | ❌ 待实现 | 需要 git 仓库 fixture |
 
 ### 6.2 离线场景处理
 
-| 任务 | 说明 |
-|------|------|
-| `Submodule` 新增 `remote_unreachable: bool` | 标记远程是否可达 |
-| 远程不可达时跳过 Orphaned 判定 | 不将子模块误报为 Orphaned |
-| 远程不可达时跳过 BehindRemote 判定 | 不将子模块误报为 BehindRemote |
-| 结果中返回 `remote_unreachable` 标识 | UI 层据此展示"状态不确定"提示 |
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| `Submodule` 新增 `remote_unreachable: bool` | ❌ 待实现 | — |
+| 远程不可达时跳过 Orphaned/BehindRemote 判定 | ❌ 待实现 | 当前 `find_reference` 失败时返回 `default`，但不标记 |
+| UI 层"状态不确定"提示 | ❌ 待实现 | — |
 
 ### 6.3 AggregateStatus + health_check
 
-| 任务 | 说明 |
-|------|------|
-| 定义 `AggregateStatus` 结构体 | 包含全部 7 种状态的计数 + total |
-| 实现 `scan_all()` | 返回 `(Vec<Submodule>, AggregateStatus)` |
-| 实现 `health_check()` | 过滤 `status != Clean` 的子模块，附上建议操作 |
-| 明确为 `scan_all` 的派生视图 | 不引入独立的状态判定逻辑 |
+| 任务 | 状态 | 实际实现 |
+|------|------|----------|
+| `AggregateStatus` 结构体（7 种状态计数 + total） | ❌ 待实现 | 当前 `RepoState` 只有 `total` / `clean_count` / `needs_attention` |
+| `scan_all()` 返回 `(Vec<Submodule>, AggregateStatus)` | ❌ 待实现 | — |
+| `health_check()` 派生自 scan_all | ✅ | `GitSubmoduleEditor::health_check()` |
+| 建议操作文本 | ✅ | `describe_issue()` 覆盖全部 7 种状态 |
+| CLI/Tauri 输出聚合统计 | ❌ 待实现 | 当前 CLI 只输出 clean_count |
 
 ---
 
 ## 标准合规对照
 
-| 标准要求 | Iter 1-5 | Iter 6 |
-|----------|----------|--------|
-| 7 种状态全部实现 | ⚠️ Orphaned 在枚举中但未被赋值 | ✅ |
-| 状态判定按优先级排序 | ✅ | — |
-| `CommitHash` 独立类型 | ✅ | — |
-| Orphaned 不提供自动收敛 | ⚠️ 检测缺失 | ✅ |
-| 离线处理 | ❌ | ✅ |
-| AggregatedStatus | ⚠️ 部分 | ✅ |
-| health_check 为 scan_all 派生视图 | ❌ | ✅ |
-| 原子操作 | ✅ | — |
-| 模型/命令层分离 | ✅ | — |
+| 标准要求 | Iter 1-5 | Iter 6 完成 | Iter 6 剩余 |
+|----------|----------|-------------|-------------|
+| 7 种状态全部实现 | ⚠️ Orphaned 未赋值 | ✅ merge_base 检测 | — |
+| 状态判定按优先级排序 | ✅ | — | — |
+| `CommitHash` 独立类型 | ✅ | — | — |
+| Orphaned 不提供自动收敛 | ⚠️ 检测缺失 | ✅ | — |
+| 离线处理 | ❌ | — | `remote_unreachable` 标记 + 判定降级 + UI |
+| AggregatedStatus | ⚠️ 部分 | — | `AggregateStatus` 结构体 + `scan_all()` + CLI/Tauri |
+| health_check 派生自 scan_all | ❌ | ✅ | — |
+| 原子操作 | ✅ | — | — |
+| 模型/命令层分离 | ✅ | — | — |
 
 ---
 
 ## 时间线
 
 ```
-Iter 0 ── Iter 1 ── Iter 2 ── Iter 3 ── Iter 4 ── Iter 5 ── Iter 6
-0.5w       2w        2w        2w        2w        2w        1w
+Iter 0 ── Iter 1 ── Iter 2 ── Iter 3 ── Iter 4 ── Iter 5 ── Iter 6 (剩余)
+0.5w       2w        2w        2w        2w        2w        按需
 ```
+
+**Iteration 6 剩余工作**：
+1. `Submodule.remote_unreachable: bool` + 离线判定降级
+2. `AggregateStatus` 结构体 + `scan_all()`
+3. CLI/Tauri/UI 输出聚合统计 + 离线标记
 
 详细开发蓝图见 [docs/dev.md](docs/dev.md)。

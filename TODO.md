@@ -2,120 +2,34 @@
 
 ## 已完成
 
-### Iteration 0：项目脚手架 ✅
+### Iteration 0-5
 
-- [x] **0.1** 初始化 Rust 项目，配置依赖
-  - [x] `cargo init`（项目根目录）
-  - [x] 添加 `git2`（vendored）、`clap`（derive）、`serde`（derive）依赖
-  - [ ] ~~验证 `cargo build` 通过~~（需本地 Rust 工具链）
-- [x] **0.2** 基础设施文件
-  - [x] 添加 `.gitignore`（含 `/target`、`.DS_Store`、`*.swp`、`.vscode/`、`.idea/`）
-  - [x] 添加 `rustfmt.toml`（max_width=100, tab_spaces=4, edition=2021）
-  - [ ] ~~验证 `cargo fmt --check` 通过~~（需本地 Rust 工具链）
-- [x] **0.3** 搭建目录结构
-  - [x] 创建 `src/model/mod.rs`
-  - [x] 创建 `src/commands/mod.rs`
-- [x] **0.4** 配置 CI
-  - [x] 创建 `.github/workflows/ci.yml`
-  - [x] CI 步骤：checkout → setup Rust → cargo check → cargo test → cargo clippy
-  - [ ] ~~验证 CI 通过~~（需 push 触发）
-- [x] **0.5** 空 CLI → 后续扩展为完整 CLI
-  - [x] clap 定义 `kse` CLI
-  - [ ] ~~验证 `cargo run -- --help`~~（需本地 Rust 工具链）
+全部完成，详见 git log `6d388be..47a0dd2`。
 
-### Iteration 1：核心模型与 CLI 原型 ✅
-
-- [x] 定义 `CommitHash(String)` 新类型，实现 `Display`（截断 7 位）+ `Default`
-- [x] 定义 `SubmoduleStatus` 枚举（7 种变体 + `priority()`）
-- [x] 定义 `Submodule` 结构体（含 `ahead_count` / `behind_count`）
-- [x] 定义 `HealthIssue` 结构体
-- [x] 定义 `RepoState` 结构体 + `RepoState::scan(&Path)` 三路 commit 比对 + revwalk 差异计数
-- [x] 实现 `SubmoduleEditor` trait
-- [x] 实现 `UpdateStrategy` 枚举（FastForward / Rebase / Merge）
-- [x] `kse health-check [path]` — 扫描并表格输出
-- [x] 错误处理：路径不存在 / 非 Git 仓库
-- [x] 单元测试覆盖全部模型层逻辑（14 个测试）
-
-### Iteration 2：原子操作命令集 ✅
-
-- [x] `add_submodule` — `git submodule add` 封装 + 路径冲突检测
-- [x] `init_all` — 批量初始化
-- [x] `update_single` — 支持 FastForward / Rebase / Merge
-- [x] `update_all` — 批量更新（容错：单个失败继续）
-- [x] `sync_to_parent` — 更新父仓库 commit 指针
-- [x] `sync_all_to_parent` — 批量同步
-- [x] `checkout_branch` — 切换到指定分支
-- [x] `create_branch` — 创建并切换到新分支
-- [x] `retire_submodule` — `git submodule deinit` + 移除 `.gitmodules` 条目 + 记录退役信息
-- [x] 错误处理：本地有未提交修改时阻止更新
-- [x] 重复添加检测：同名/同路径校验
-- [x] 集成测试：30 个 `#[ignore]` 测试覆盖全部 git2 操作路径
-- [x] 单元测试覆盖：model（14 tests）、commands（7 tests）、editor（7 tests）、history（9 tests）、export（7 tests）
-- [x] `checkout_all` / `branch_all` — 批量切换/创建分支（trait + CLI + Tauri）
-- [x] UI 多选（复选框 + Select All）+ 选中执行 + 进度显示
-- [x] UI dry-run 预览弹窗（模态框，执行前展示操作计划）
-- [x] 撤销指引（reflog 文档 → README）
-
-### Iteration 3：Tauri 外壳与状态驱动 UI ✅
-
-- [x] `src-tauri/Cargo.toml` + `tauri.conf.json` + `build.rs`
-- [x] 7 个 Tauri command 绑定（scan_repo / health_check / init_all / update_single / update_all / sync_to_parent / sync_all_to_parent / retire_submodule / list_history / export_ci）
-- [x] `src/lib.rs` 共享库 + CLI/Tauri 共用 `kse_core`
-- [x] Web UI：侧边栏（仓库路径 + 统计 + 批量操作 + 导出 CI + 历史）
-- [x] Web UI：子模块列表表格（状态颜色圆点 + 操作按钮）
-- [x] Web UI：详情面板（三列 commit 对比 + diff 差异数 + 状态引导 + 建议操作）
-- [x] Web UI：健康问题横幅
-- [x] Web UI：`--dry-run` 导出 CI 按钮（复制到剪贴板）
-- [x] 响应式 flex 布局
-
-### Iteration 4：操作历史与异常处理 ✅
-
-- [x] SQLite schema：`operations` 表 + `retired_submodules` 表
-- [x] `rusqlite`（bundled）数据库初始化（`.git/kse/history.db`）
-- [x] 每次原子操作自动写入 `operations` 表
-- [x] `kse history` CLI 命令（`--limit` / `--submodule`）
-- [x] Web UI 侧边栏历史面板
-- [x] Detached / Dirty / Orphaned 健康检测 + 修复引导
-- [x] retire 自动记录退役信息到 `retired_submodules` 表
-
-### Iteration 5：分批灰度与打包分发 ✅
-
-- [x] 全局 `--dry-run` 参数，所有命令支持预览模式
-- [x] `commands/export.rs` 模块：shell / GitHub Actions / GitLab CI 脚本生成
-- [x] `kse export-ci` CLI 命令（`--format` / `--output`）
-- [x] `export_ci` Tauri command + Web UI 按钮
-- [x] Tauri 跨平台打包配置（macOS .dmg / Linux .AppImage / Windows .msi）
-- [x] README 用户手册
-- [x] CHANGELOG.md
-- [x] 版本号更新到 v1.0.0
+关键交付：
+- `kse` CLI — 14 个子命令，`--dry-run` 全局预览
+- Tauri 桌面应用 — 12 个后端命令 + 完整 Web UI
+- SQLite 操作历史 — `.git/kse/history.db`
+- CI 导出 — shell / GitHub Actions / GitLab CI
+- 76 个测试（44 unit + 32 integration）
 
 ---
 
 ## Iteration 6：规范合规补齐
 
-**目标**：对齐 `git-submodule.md` v1.1 标准。
-
 ### 6.1 Orphaned 检测逻辑
 
-- [ ] **6.1.1** 实现 `is_orphaned()` 函数
-  - [ ] 通过 revwalk 或 `odb.exists()` 检查 `parent_pointer` 在远程是否仍存在
-  - [ ] 处理远程不可达时的降级行为（返回 false，不误报）
-- [ ] **6.1.2** 插入判定分支
-  - [ ] 在 `RepoState::scan()` 中 `Dirty` 之后、`Detached` 之前插入 Orphaned 判定
-  - [ ] 保持优先级顺序与标准一致（Dirty > Orphaned > Detached）
-- [ ] **6.1.3** 单元测试
-  - [ ] 模拟远程分支 rebase 后 `parent_pointer` 被删除的场景
-  - [ ] 测试远程不可达时不会误报 Orphaned
-  - [ ] 测试 Orphaned 优先级正确（高于 Detached、低于 Dirty）
+- [x] **6.1.1** 实现 `is_orphaned()` — merge_base 判定 parent_pointer reachability（inline in `scan()`）
+- [x] **6.1.2** 插入判定分支 — Dirty > Orphaned > Detached（`bb058e6`）
+- [ ] **6.1.3** 单元测试 — rebase 后 orphaned 场景（需 git 仓库 fixture）
+- [x] 优先级排序已对齐 — `Dirty=0 > Orphaned=1 > Detached=2 > Uninitialized=3 > BehindRemote=4 > AheadOfParent=5 > Clean=6`
 
 ### 6.2 离线场景处理
 
-- [ ] **6.2.1** `Submodule` 新增 `remote_unreachable: bool` 字段
-  - [ ] 更新结构体定义
-  - [ ] 更新所有构造位置（scan / 测试中的 mock）
-  - [ ] 确保向后兼容
-- [ ] **6.2.2** 远程不可达时的判定降级
-  - [ ] `remote_head` 获取失败时设置 `remote_unreachable = true`
+- [ ] **6.2.1** `Submodule` 新增 `remote_unreachable: bool`
+  - [ ] 更新结构体定义 + 所有构造位置 + `SubmoduleInfo` Tauri 结构体
+  - [ ] `RepoState::scan()` 中 `find_reference` 失败时标记 `true`
+- [ ] **6.2.2** 远程不可达时判定降级
   - [ ] 跳过 Orphaned 判定分支
   - [ ] 跳过 BehindRemote 判定分支
   - [ ] `ahead_count` / `behind_count` 置 0
@@ -126,35 +40,29 @@
 ### 6.3 AggregateStatus + health_check
 
 - [ ] **6.3.1** 定义 `AggregateStatus` 结构体
-  - [ ] 包含 `total` + 全部 7 种状态的计数
-  - [ ] 实现 `Default`（全零）
-  - [ ] 实现 `From<&[Submodule]>` 或关联函数 `from_submodules()`
-- [ ] **6.3.2** 实现 `scan_all()` 函数
-  - [ ] 委托 `RepoState::scan()` 获取子模块列表
-  - [ ] 聚合生成 `AggregateStatus`
-  - [ ] 返回 `(Vec<Submodule>, AggregateStatus)`
-- [ ] **6.3.3** 实现 `health_check()` 函数
-  - [ ] 过滤 `status != Clean` 的子模块
-  - [ ] 为每个非 Clean 状态附上建议操作文本
-  - [ ] 明确为 `scan_all` 的派生视图，不引入独立判定逻辑
+  - [ ] `total: usize` + 7 种状态计数
+  - [ ] `Default` + `from_submodules(&[Submodule]) -> Self`
+- [ ] **6.3.2** 实现 `scan_all()` — 委托 `RepoState::scan()` + 聚合 `AggregateStatus`
+- [x] **6.3.3** `health_check()` — 过滤 `status != Clean` + `describe_issue()` 建议操作（`editor.rs`）
 - [ ] **6.3.4** 更新 CLI 和 Tauri 绑定
   - [ ] `kse health-check` 输出聚合统计
   - [ ] Tauri command 返回 `AggregateStatus`
+  - [ ] Web UI 概览展示各状态计数
 
 ---
 
 ## 待完成（需本地环境）
 
-| 任务 | 迭代 | 命令 |
-|------|------|------|
-| 本地编译验证 | 全部 | `cargo build && cargo test && cargo clippy -- -D warnings` |
-| CI 触发验证 | 0.4 | `git push origin main` |
-| Tauri 桌面应用启动 | 3.0 | `cargo tauri dev` |
-| Tauri 跨平台打包 | 5.4 | `cargo tauri build` |
-| GitHub Release | 5.6 | 创建 GitHub Release + 上传安装包 |
+| 任务 | 命令 |
+|------|------|
+| 本地编译验证 | `cargo build && cargo test && cargo clippy -- -D warnings` |
+| CI 触发验证 | `git push origin main` |
+| Tauri 桌面应用启动 | `cargo tauri dev` |
+| Tauri 跨平台打包 | `cargo tauri build` |
+| GitHub Release | 创建 GitHub Release + 上传安装包 |
 
 ## 低优先级
 
 | 任务 | 原因 |
 |------|------|
-| URL 可达性验证 | 需要异步网络请求（`reqwest` 或 `curl`），与 Iteration 6 的离线场景正交 |
+| URL 可达性验证 | 需要异步网络请求（`reqwest` 或 `curl`），与 6.2 离线场景正交 |
