@@ -34,7 +34,7 @@
 - [x] 实现 `UpdateStrategy` 枚举（FastForward / Rebase / Merge）
 - [x] `kse health-check [path]` — 扫描并表格输出
 - [x] 错误处理：路径不存在 / 非 Git 仓库
-- [x] 4 个单元测试（模型层，不依赖 Git）
+- [x] 6 个单元测试（模型层 + 集成测试 fixture）
 
 ### Iteration 2：原子操作命令集 ✅
 
@@ -48,6 +48,8 @@
 - [x] `create_branch` — 创建并切换到新分支
 - [x] `retire_submodule` — `git submodule deinit` + 移除 `.gitmodules` 条目 + 记录退役信息
 - [x] 错误处理：本地有未提交修改时阻止更新
+- [x] 重复添加检测：同名/同路径校验
+- [x] 集成测试：7 个 `#[ignore]` 测试（临时仓库 + 子模块 fixture）
 
 ### Iteration 3：Tauri 外壳与状态驱动 UI ✅
 
@@ -56,7 +58,7 @@
 - [x] `src/lib.rs` 共享库 + CLI/Tauri 共用 `kse_core`
 - [x] Web UI：侧边栏（仓库路径 + 统计 + 批量操作 + 导出 CI + 历史）
 - [x] Web UI：子模块列表表格（状态颜色圆点 + 操作按钮）
-- [x] Web UI：详情面板（三列 commit 对比 + 建议操作）
+- [x] Web UI：详情面板（三列 commit 对比 + diff 差异数 + 状态引导 + 建议操作）
 - [x] Web UI：健康问题横幅
 - [x] Web UI：`--dry-run` 导出 CI 按钮（复制到剪贴板）
 - [x] 响应式 flex 布局
@@ -98,14 +100,10 @@
 
 | 任务 | 原因 | 优先级 |
 |------|------|--------|
-| 2.6 集成测试（临时 git 仓库 + 子模块 fixture） | 缺少测试基础设施 | 中 |
 | 5.1 批量选择 + 分批执行（拓扑排序 + UI 多选 + 进度条） | 需要 UI 组件 | 低 |
-| 4.3 UI 修复按钮联动操作 | 需要 UI 事件改进 | 低 |
 | 4.5 按时间范围筛选历史 | 需要前端日期选择器 | 低 |
 | 4.5 撤销指引（reflog） | 纯文档 | 低 |
-| 3.4 显示 commit 差异数 | 需要 git2 revwalk | 低 |
 | 5.2 UI 模式预览弹窗 | 需要前端弹窗组件 | 低 |
 | 2.1 URL 可达性验证 | 需要网络请求 | 低 |
-| 2.1 重复添加检测 | 需要检查子模块名冲突 | 低 |
 | 2.5 批量 checkout/branch | 需要批量参数支持 | 低 |
 | 4.4 完整 Orphaned 远程检测 | 需要 fetch 操作 | 低 |

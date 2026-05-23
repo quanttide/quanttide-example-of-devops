@@ -42,10 +42,25 @@ impl SubmoduleEditor for GitSubmoduleEditor {
         branch: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let repo = git2::Repository::open(&self.root)?;
+
+        // 检测重复：检查同名或同路子模块是否已存在
+        let repo_submodules = repo.submodules()?;
+        for existing in &repo_submodules {
+            let en = existing.name().unwrap_or("");
+            if en == path {
+                return Err(format!("子模块 '{}' 已存在 (同名)", path).into());
+            }
+            let ep = existing.path();
+            if ep == Path::new(path) {
+                return Err(format!("路径 '{}' 已被子模块 '{}' 占用", path, en).into());
+            }
+        }
+
         let full_path = self.root.join(path);
         if full_path.exists() {
             return Err(format!("路径已存在: {}", path).into());
         }
+
         let mut sm = repo.submodule(url, Path::new(path), false)?;
         sm.add_finalize()?;
         sm.set_branch(branch)?;

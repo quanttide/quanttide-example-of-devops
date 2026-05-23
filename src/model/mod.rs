@@ -50,6 +50,8 @@ pub struct Submodule {
     pub local_head: CommitHash,
     pub remote_head: CommitHash,
     pub status: SubmoduleStatus,
+    pub ahead_count: usize,
+    pub behind_count: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -130,18 +132,27 @@ impl RepoState {
                 }
             };
 
+            let (ahead_count, behind_count) = if is_uninitialized {
+                (0, 0)
+            } else {
+                match git2::Repository::open(&full_sm_path) {
+                    Ok(ref sub_repo) => count_commits(sub_repo, &parent_pointer, &remote_head, &local_head),
+                    Err(_) => (0, 0),
+                }
+            };
+
             let status = if is_uninitialized {
                 SubmoduleStatus::Uninitialized
             } else if is_dirty {
                 SubmoduleStatus::Dirty
             } else if is_detached {
                 SubmoduleStatus::Detached
+            } else if ahead_count > 0 && behind_count == 0 {
+                SubmoduleStatus::AheadOfParent
+            } else if behind_count > 0 {
+                SubmoduleStatus::BehindRemote
             } else if local_head == parent_pointer && local_head == remote_head {
                 SubmoduleStatus::Clean
-            } else if parent_pointer != local_head && local_head == remote_head {
-                SubmoduleStatus::AheadOfParent
-            } else if remote_head != local_head {
-                SubmoduleStatus::BehindRemote
             } else {
                 SubmoduleStatus::Clean
             };
@@ -155,6 +166,8 @@ impl RepoState {
                 local_head,
                 remote_head,
                 status,
+                ahead_count,
+                behind_count,
             });
         }
 
@@ -177,6 +190,45 @@ impl RepoState {
             needs_attention,
         })
     }
+}
+
+fn count_commits(
+    sub_repo: &git2::Repository,
+    parent_pointer: &CommitHash,
+    remote_head: &CommitHash,
+    local_head: &CommitHash,
+) -> (usize, usize) {
+    let parse = |h: &CommitHash| git2::Oid::from_str(&h.0).ok();
+
+    let parent = parse(parent_pointer);
+    let remote = parse(remote_head);
+    let local = parse(local_head);
+
+    let ahead = count_between(sub_repo, parent, local);
+    let behind = count_between(sub_repo, local, remote);
+
+    (ahead, behind)
+}
+
+fn count_between(
+    repo: &git2::Repository,
+    from: Option<git2::Oid>,
+    to: Option<git2::Oid>,
+) -> usize {
+    let (Some(from), Some(to)) = (from, to) else {
+        return 0;
+    };
+    if from == to {
+        return 0;
+    }
+    let mut walk = match repo.revwalk() {
+        Ok(w) => w,
+        Err(_) => return 0,
+    };
+    if walk.push(to).is_err() || walk.hide(from).is_err() {
+        return 0;
+    }
+    walk.count()
 }
 
 #[cfg(test)]

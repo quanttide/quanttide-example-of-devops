@@ -72,12 +72,12 @@ Initial     docs      Iter 0      fix       1.3-fix    Iter 2      Iter 3      I
 
 | 任务 | 状态 | 实际实现 |
 |------|------|----------|
-| 2.1 `add_submodule`（路径冲突检测） | ✅ | `src/commands/editor.rs` |
+| 2.1 `add_submodule`（路径冲突检测 + 重复添加检测） | ✅ | `src/commands/editor.rs` |
 | 2.2 `init_all` + `update_single`（3 策略） | ✅ | `src/commands/editor.rs` |
 | 2.3 `sync_to_parent` + `sync_all_to_parent` | ✅ | `src/commands/editor.rs` |
 | 2.4 `retire_submodule`（含 SQLite 日志） | ✅ | `src/commands/editor.rs` + `history.rs` |
 | 2.5 `checkout_branch` + `create_branch` | ✅ | `src/commands/editor.rs` |
-| 2.6 集成测试 | ❌ 待实现 | — |
+| 2.6 集成测试 | ✅ | `tests/integration.rs`（7 个测试，标记 `#[ignore]`） |
 
 **交付物**：完整的 `kse` CLI 命令集（9 个子命令）
 
@@ -118,7 +118,7 @@ Initial     docs      Iter 0      fix       1.3-fix    Iter 2      Iter 3      I
 |------|------|----------|
 | 4.1 SQLite schema + `HistoryDb` | ✅ | `src/commands/history.rs` |
 | 4.2 操作历史记录 + 查询 | ✅ | `history.rs` + CLI + Tauri + UI |
-| 4.3 Detached/Dirty 修复引导 | ✅ | `editor.rs` + `app.js` |
+| 4.3 Detached/Dirty 修复引导 | ✅ | 详情面板状态引导 + 修复按钮联动 |
 | 4.4 Orphaned 告警 | ✅ | `health_check` 检测 + 红色标记 |
 | 4.5 操作历史 UI 面板 | ✅ | 侧边栏历史列表 |
 
@@ -153,7 +153,6 @@ Initial     docs      Iter 0      fix       1.3-fix    Iter 2      Iter 3      I
 
 | 任务 | 原因 |
 |------|------|
-| 2.6 集成测试 | 需要 git repo fixture |
 | 5.1 批量选择 + 分批执行 | 需要 UI 多选组件 |
 | `cargo build` + `cargo test` 本地验证 | 本环境无 Rust 工具链 |
 | push 触发 CI | 需用户执行 `git push` |

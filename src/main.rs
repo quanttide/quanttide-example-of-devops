@@ -150,12 +150,23 @@ fn main() {
                     if state.submodules.is_empty() && state.total == 0 {
                         println!("  没有子模块");
                     } else {
+                        println!("  {:<20} {:<15} {:<10} {:<8} {}", "名称", "状态", "分支", "差异", "");
                         for sm in &state.submodules {
+                            let diff = if sm.ahead_count > 0 && sm.behind_count > 0 {
+                                format!("+{}/-{}", sm.ahead_count, sm.behind_count)
+                            } else if sm.ahead_count > 0 {
+                                format!("+{}", sm.ahead_count)
+                            } else if sm.behind_count > 0 {
+                                format!("-{}", sm.behind_count)
+                            } else {
+                                String::new()
+                            };
                             println!(
-                                "  {:<20} {:<15} {}",
+                                "  {:<20} {:<15} {:<10} {:<8}",
                                 sm.name,
                                 format!("{:?}", sm.status),
                                 sm.tracked_branch,
+                                diff,
                             );
                         }
                     }

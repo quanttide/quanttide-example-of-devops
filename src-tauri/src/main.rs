@@ -24,6 +24,8 @@ fn scan_repo(path: String) -> Result<Vec<SubmoduleInfo>, String> {
             local_head: sm.local_head.to_string(),
             remote_head: sm.remote_head.to_string(),
             status: format!("{:?}", sm.status),
+            ahead_count: sm.ahead_count,
+            behind_count: sm.behind_count,
         })
         .collect();
 
@@ -155,6 +157,8 @@ struct SubmoduleInfo {
     local_head: String,
     remote_head: String,
     status: String,
+    ahead_count: usize,
+    behind_count: usize,
 }
 
 #[derive(serde::Serialize)]
