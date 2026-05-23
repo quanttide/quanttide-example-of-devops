@@ -23,13 +23,13 @@ impl GitSubmoduleEditor {
         Self { root, history }
     }
 
-    fn log_ok(&self, action: &str, submodule: &str, detail: &str) {
+    pub(crate) fn log_ok(&self, action: &str, submodule: &str, detail: &str) {
         self.history
             .log_operation(action, submodule, detail, true)
             .ok();
     }
 
-    fn log_err(&self, action: &str, submodule: &str, detail: &str) {
+    pub(crate) fn log_err(&self, action: &str, submodule: &str, detail: &str) {
         self.history
             .log_operation(action, submodule, detail, false)
             .ok();
@@ -58,7 +58,7 @@ impl SubmoduleEditor for GitSubmoduleEditor {
         path: &str,
         branch: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut repo = git2::Repository::open(&self.root)?;
+        let repo = git2::Repository::open(&self.root)?;
 
         // 检测重复：检查同名或同路子模块是否已存在
         {
@@ -85,13 +85,22 @@ impl SubmoduleEditor for GitSubmoduleEditor {
             return Err(format!("URL 不可达: {} — {}", url, msg).into());
         }
 
-        let name = {
-            let mut sm = repo.submodule(url, Path::new(path), false)?;
-            sm.add_finalize()?;
-            let n = sm.name().unwrap_or(path).to_string();
-            n
-        };
-        repo.submodule_set_branch(path, branch)?;
+        // Use native git for submodule add (git2's submodule() has issues with file:// URLs)
+        let output = std::process::Command::new("git")
+            .args(["submodule", "add", "--branch", branch, url, path])
+            .current_dir(&self.root)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .map_err(|e| format!("执行 git submodule add 失败: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let msg = stderr.lines().next().unwrap_or("未知错误").trim();
+            return Err(format!("添加子模块失败: {}", msg).into());
+        }
+
+        let name = path.to_string();
         self.log_ok(
             "add",
             &name,
@@ -274,8 +283,16 @@ impl SubmoduleEditor for GitSubmoduleEditor {
             .args(["submodule", "deinit", "-f", name])
             .current_dir(&self.root)
             .output();
-        if let Err(e) = result {
-            eprintln!("警告: git submodule deinit 失败: {} (继续处理)", e);
+        match result {
+            Err(e) => eprintln!("警告: git submodule deinit 无法执行: {} (继续处理)", e),
+            Ok(out) if !out.status.success() => {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                eprintln!(
+                    "警告: git submodule deinit 失败: {} (继续处理)",
+                    stderr.trim()
+                );
+            }
+            _ => {}
         }
 
         let gitmodules_path = self.root.join(".gitmodules");

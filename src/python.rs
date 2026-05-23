@@ -7,15 +7,11 @@ use std::path::PathBuf;
 fn scan_repo(path: String) -> PyResult<PyObject> {
     let root = PathBuf::from(&path);
     let canonical = std::fs::canonicalize(&root).map_err(|e| {
-        pyo3::exceptions::PyValueError::new_err(format!(
-            "无法解析路径 '{}': {}",
-            path, e
-        ))
+        pyo3::exceptions::PyValueError::new_err(format!("无法解析路径 '{}': {}", path, e))
     })?;
 
-    let state = model::RepoState::scan(&canonical).map_err(|e| {
-        pyo3::exceptions::PyRuntimeError::new_err(format!("扫描仓库失败: {}", e))
-    })?;
+    let state = model::RepoState::scan(&canonical)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("扫描仓库失败: {}", e)))?;
 
     // Serialize to JSON string, then parse into Python dict
     let json_str = serde_json::to_string_pretty(&state)
@@ -23,9 +19,7 @@ fn scan_repo(path: String) -> PyResult<PyObject> {
 
     Python::with_gil(|py| {
         let json_mod = py.import("json")?;
-        let result: PyObject = json_mod
-            .call_method1("loads", (json_str,))?
-            .into();
+        let result: PyObject = json_mod.call_method1("loads", (json_str,))?.into();
         Ok(result)
     })
 }

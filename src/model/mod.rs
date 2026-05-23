@@ -144,15 +144,11 @@ impl RepoState {
                             .map(|o| (CommitHash(o.to_string()), false))
                             .unwrap_or_else(|| (CommitHash::default(), true));
 
-                        let ahead = if unreachable {
-                            0
-                        } else {
-                            count_between_opt(
-                                &sub_repo,
-                                parse_oid(&parent_pointer),
-                                parse_oid(&local),
-                            )
-                        };
+                        let ahead = count_between_opt(
+                            &sub_repo,
+                            parse_oid(&parent_pointer),
+                            parse_oid(&local),
+                        );
                         let behind = if unreachable {
                             0
                         } else {
@@ -206,7 +202,9 @@ impl RepoState {
                 SubmoduleStatus::Detached
             } else if is_orphaned && !remote_unreachable {
                 SubmoduleStatus::Orphaned
-            } else if ahead_count > 0 && behind_count == 0 {
+            } else if (remote_unreachable && local_head != parent_pointer)
+                || (ahead_count > 0 && behind_count == 0)
+            {
                 SubmoduleStatus::AheadOfParent
             } else if behind_count > 0 && !remote_unreachable {
                 SubmoduleStatus::BehindRemote
