@@ -162,6 +162,18 @@ fn main() {
                     if !state.needs_attention.is_empty() {
                         println!("需要关注: {}", state.needs_attention.join(", "));
                     }
+                    // 聚合统计
+                    if let Ok((_, agg)) = model::RepoState::scan_all(&root) {
+                        println!("\n聚合统计:");
+                        println!("  总数: {}", agg.total);
+                        println!("  ✅ Clean: {}", agg.clean);
+                        if agg.ahead_of_parent > 0 { println!("  ⬆ AheadOfParent: {}", agg.ahead_of_parent); }
+                        if agg.behind_remote > 0 { println!("  ⬇ BehindRemote: {}", agg.behind_remote); }
+                        if agg.detached > 0 { println!("  ⚠ Detached: {}", agg.detached); }
+                        if agg.dirty > 0 { println!("  🔴 Dirty: {}", agg.dirty); }
+                        if agg.orphaned > 0 { println!("  💀 Orphaned: {}", agg.orphaned); }
+                        if agg.uninitialized > 0 { println!("  ⚪ Uninitialized: {}", agg.uninitialized); }
+                    }
                     println!();
                     if state.submodules.is_empty() && state.total == 0 {
                         println!("  没有子模块");

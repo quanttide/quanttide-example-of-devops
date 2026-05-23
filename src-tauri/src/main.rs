@@ -7,12 +7,12 @@ use kse_core::model::RepoState;
 use std::path::PathBuf;
 
 #[tauri::command]
-fn scan_repo(path: String) -> Result<Vec<SubmoduleInfo>, String> {
+fn scan_repo(path: String) -> Result<ScanResult, String> {
     let root = PathBuf::from(&path);
     let state =
         RepoState::scan(&root).map_err(|e| format!("扫描失败: {}", e))?;
 
-    let infos: Vec<SubmoduleInfo> = state
+    let submodules: Vec<SubmoduleInfo> = state
         .submodules
         .into_iter()
         .map(|sm| SubmoduleInfo {
@@ -26,10 +26,22 @@ fn scan_repo(path: String) -> Result<Vec<SubmoduleInfo>, String> {
             status: format!("{:?}", sm.status),
             ahead_count: sm.ahead_count,
             behind_count: sm.behind_count,
+            remote_unreachable: sm.remote_unreachable,
         })
         .collect();
 
-    Ok(infos)
+    let agg = kse_core::model::AggregateStatus::from_submodules(&state.submodules);
+
+    Ok(ScanResult { submodules, aggregate: AggregateInfo {
+        total: agg.total,
+        clean: agg.clean,
+        ahead_of_parent: agg.ahead_of_parent,
+        behind_remote: agg.behind_remote,
+        detached: agg.detached,
+        dirty: agg.dirty,
+        orphaned: agg.orphaned,
+        uninitialized: agg.uninitialized,
+    }})
 }
 
 #[tauri::command]
@@ -164,6 +176,24 @@ fn parse_strategy(s: &str) -> Result<UpdateStrategy, String> {
 }
 
 #[derive(serde::Serialize)]
+struct ScanResult {
+    submodules: Vec<SubmoduleInfo>,
+    aggregate: AggregateInfo,
+}
+
+#[derive(serde::Serialize)]
+struct AggregateInfo {
+    total: usize,
+    clean: usize,
+    ahead_of_parent: usize,
+    behind_remote: usize,
+    detached: usize,
+    dirty: usize,
+    orphaned: usize,
+    uninitialized: usize,
+}
+
+#[derive(serde::Serialize)]
 struct SubmoduleInfo {
     name: String,
     path: String,
@@ -175,6 +205,7 @@ struct SubmoduleInfo {
     status: String,
     ahead_count: usize,
     behind_count: usize,
+    remote_unreachable: bool,
 }
 
 #[derive(serde::Serialize)]

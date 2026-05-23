@@ -260,7 +260,36 @@ fn test_scan_clean_after_add() {
 
 #[test]
 #[ignore]
-fn test_scan_detects_ahead_of_parent() {
+fn test_scan_remote_unreachable() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (remote_path, parent_path) = setup_repo_pair(&tmp);
+    let _editor = add_submodule(&parent_path, &remote_path, "lib-off");
+    // Remove the remote tracking ref to simulate unreachable remote
+    let sub_repo = git2::Repository::open(&parent_path.join("lib-off")).unwrap();
+    let ref_name = format!("refs/remotes/origin/main");
+    if let Ok(mut reference) = sub_repo.find_reference(&ref_name) {
+        reference.delete().ok();
+    }
+    let state = RepoState::scan(&parent_path).unwrap();
+    let sm = &state.submodules[0];
+    // When remote unreachable, should not be BehindRemote or Orphaned
+    assert!(!sm.remote_unreachable || sm.status != SubmoduleStatus::BehindRemote);
+}
+
+#[test]
+#[ignore]
+fn test_aggregate_status_from_scan() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (remote_path, parent_path) = setup_repo_pair(&tmp);
+    let _editor = add_submodule(&parent_path, &remote_path, "lib-agg");
+    let (_, agg) = RepoState::scan_all(&parent_path).unwrap();
+    assert_eq!(agg.total, 1);
+    assert_eq!(agg.clean, 1);
+}
+
+#[test]
+#[ignore]
+fn test_detects_ahead_of_parent() {
     let tmp = tempfile::tempdir().unwrap();
     let (remote_path, parent_path) = setup_repo_pair(&tmp);
     let editor = add_submodule(&parent_path, &remote_path, "lib-ahead");

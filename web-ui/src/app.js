@@ -67,21 +67,24 @@ async function scan() {
   }
 
   try {
-    const submodules = await invoke('scan_repo', { path });
+    const result = await invoke('scan_repo', { path });
+    const submodules = result.submodules;
+    const agg = result.aggregate;
     const health = await invoke('health_check', { path });
 
     if (submodules.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" class="empty">没有子模块</td></tr>';
     } else {
-      tbody.innerHTML = submodules.map(sm => `
-        <tr onclick="showDetail('${sm.name}', '${sm.parent_pointer}', '${sm.local_head}', '${sm.remote_head}', '${sm.status}', '${sm.tracked_branch}', ${sm.ahead_count || 0}, ${sm.behind_count || 0})">
+      tbody.innerHTML = submodules.map(sm => {
+        const statusIcon = sm.remote_unreachable ? '🛰' : '';
+        return `<tr onclick="showDetail('${sm.name}', '${sm.parent_pointer}', '${sm.local_head}', '${sm.remote_head}', '${sm.status}', '${sm.tracked_branch}', ${sm.ahead_count || 0}, ${sm.behind_count || 0}, ${sm.remote_unreachable || false})">
           <td onclick="event.stopPropagation()"><input type="checkbox" class="sm-checkbox" value="${sm.name}" /></td>
           <td>${sm.name}</td>
-          <td><span class="status-dot dot-${statusClass(sm.status)}"></span>${statusLabel(sm.status)}</td>
+          <td><span class="status-dot dot-${statusClass(sm.status)}"></span>${statusIcon}${statusLabel(sm.status)}</td>
           <td>${sm.tracked_branch}</td>
           <td>${actionButtons(sm.name, sm.status)}</td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
     }
 
     if (health.length > 0) {
@@ -98,6 +101,19 @@ async function scan() {
     document.getElementById('stat-clean').textContent = clean;
     document.getElementById('stat-attention').textContent = attention;
 
+    // 聚合统计侧边栏
+    let aggHtml = '';
+    if (agg) {
+      if (agg.ahead_of_parent > 0) aggHtml += `<p>领先: ${agg.ahead_of_parent}</p>`;
+      if (agg.behind_remote > 0) aggHtml += `<p>落后: ${agg.behind_remote}</p>`;
+      if (agg.detached > 0) aggHtml += `<p>游离: ${agg.detached}</p>`;
+      if (agg.dirty > 0) aggHtml += `<p>脏: ${agg.dirty}</p>`;
+      if (agg.orphaned > 0) aggHtml += `<p>孤儿: ${agg.orphaned}</p>`;
+      if (agg.uninitialized > 0) aggHtml += `<p>未初始化: ${agg.uninitialized}</p>`;
+    }
+    const aggEl = document.getElementById('aggregate-detail');
+    if (aggEl) aggEl.innerHTML = aggHtml;
+
     log(`扫描完成: ${submodules.length} 个子模块`);
     loadHistory();
   } catch (err) {
@@ -107,11 +123,13 @@ async function scan() {
 }
 
 // ---- Detail ----
-function showDetail(name, pp, local, remote, status, branch, ahead, behind) {
+function showDetail(name, pp, local, remote, status, branch, ahead, behind, unreachable) {
   const detail = document.getElementById('detail');
   detail.style.display = 'block';
   let diffHtml = '';
-  if (ahead > 0 && behind > 0) diffHtml = `<p>差异: +${ahead} / -${behind}</p>`;
+  if (unreachable) {
+    diffHtml = '<p class="status-dirty">🛰 远程仓库不可达 — 部分状态判定已降级</p>';
+  } else if (ahead > 0 && behind > 0) diffHtml = `<p>差异: +${ahead} / -${behind}</p>`;
   else if (ahead > 0) diffHtml = `<p>差异: 领先 <strong>+${ahead}</strong></p>`;
   else if (behind > 0) diffHtml = `<p>差异: 落后 <strong>-${behind}</strong></p>`;
   else diffHtml = `<p>差异: 同步</p>`;
