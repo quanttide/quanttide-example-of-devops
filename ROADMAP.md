@@ -138,7 +138,8 @@ Initial     docs      Iter 0      fix       1.3-fix    Iter 2      Iter 3      I
 
 | 任务 | 状态 | 实际实现 |
 |------|------|----------|
-| 5.1 批量选择 + 分批执行 | ❌ 待实现 | — |
+| 5.1 批量选择 + 分批执行 | ✅ 已实现 | UI 多选 + 选中执行 + 进度条 + dry-run 弹窗 |
+| 2.1 URL 可达性验证 | ❌ 待实现 | 需要网络请求 |
 | 5.2 `--dry-run` 预览模式 | ✅ | 全局 CLI flag |
 | 5.3 CI 脚本导出 | ✅ | `export.rs` + CLI + Tauri + UI |
 | 5.4 Tauri 跨平台打包配置 | ✅ | `tauri.conf.json` |
