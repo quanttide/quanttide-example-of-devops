@@ -88,18 +88,34 @@ pub trait Storage {
 }
 
 pub struct FileStorage {
-    path: std::path::PathBuf,
     events_path: std::path::PathBuf,
     attempts: Vec<ReleaseAttempt>,
 }
 
+fn replay_events(path: &Path) -> Vec<ReleaseAttempt> {
+    if !path.exists() {
+        return Vec::new();
+    }
+    let mut attempts: Vec<ReleaseAttempt> = Vec::new();
+    if let Ok(content) = std::fs::read_to_string(path) {
+        for line in content.lines() {
+            if let Ok(event) = serde_json::from_str::<ReleaseAttempt>(line) {
+                if let Some(existing) = attempts.iter_mut().find(|a| a.version == event.version) {
+                    *existing = event;
+                } else {
+                    attempts.push(event);
+                }
+            }
+        }
+    }
+    attempts
+}
+
 impl FileStorage {
     pub fn new(base_path: &Path) -> Self {
-        let path = base_path.join(".qtcloud/releases.json");
-        let events_path = base_path.join(".qtcloud/release-events.jsonl");
-        let attempts = load_attempts(&path);
+        let events_path = base_path.join(".quanttide/devops/release-journal.jsonl");
+        let attempts = replay_events(&events_path);
         Self {
-            path,
             events_path,
             attempts,
         }
@@ -117,12 +133,6 @@ impl Storage for FileStorage {
         } else {
             self.attempts.push(attempt.clone());
         }
-
-        if let Some(parent) = self.path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let json = serde_json::to_string_pretty(&self.attempts)?;
-        std::fs::write(&self.path, json)?;
 
         if let Some(parent) = self.events_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -146,17 +156,6 @@ impl Storage for FileStorage {
 
     fn list(&self) -> Vec<ReleaseAttempt> {
         self.attempts.clone()
-    }
-}
-
-fn load_attempts(path: &Path) -> Vec<ReleaseAttempt> {
-    if path.exists() {
-        std::fs::read_to_string(path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
-    } else {
-        Vec::new()
     }
 }
 
@@ -279,7 +278,7 @@ mod tests {
         let a = ReleaseAttempt::new("v1.0.0", "first");
         storage.save(&a).unwrap();
 
-        let events_path = dir.path().join(".qtcloud/release-events.jsonl");
+        let events_path = dir.path().join(".quanttide/devops/release-journal.jsonl");
         let content = std::fs::read_to_string(&events_path).unwrap();
         assert!(content.contains("v1.0.0"));
 

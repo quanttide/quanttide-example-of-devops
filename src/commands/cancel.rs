@@ -4,7 +4,6 @@ use crate::model::release::{FileStorage, ReleaseStatus, Storage, TransitionError
 
 pub fn run(
     version: &str,
-    reason: &str,
     repo_path: &Path,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let mut storage = FileStorage::new(repo_path);
@@ -32,7 +31,6 @@ pub fn run(
         .unwrap_or_default()
         .as_secs()
         .to_string();
-    attempt.reason = reason.to_string();
     storage.save(&attempt)?;
 
     let attempt_id = attempt.id.clone();
@@ -53,14 +51,14 @@ mod tests {
         a.status = ReleaseStatus::Published;
         storage.save(&a).unwrap();
 
-        let result = run("v1.0.0", "reason", dir.path());
+        let result = run("v1.0.0", dir.path());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_cancel_nonexistent() {
         let dir = tempfile::tempdir().unwrap();
-        let result = run("v9.9.9", "", dir.path());
+        let result = run("v9.9.9", dir.path());
         assert!(result.is_err());
     }
 
@@ -75,13 +73,12 @@ mod tests {
             storage.save(&a).unwrap();
         }
 
-        let result = run("v1.0.0", "no longer needed", dir.path());
+        let result = run("v1.0.0", dir.path());
         assert!(result.is_ok());
 
         let storage = FileStorage::new(dir.path());
         let loaded = storage.load("v1.0.0").unwrap();
         assert_eq!(loaded.status, ReleaseStatus::Cancelled);
-        assert_eq!(loaded.reason, "no longer needed");
         assert_eq!(loaded.id, attempt_id);
     }
 }

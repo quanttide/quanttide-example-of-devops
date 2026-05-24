@@ -16,33 +16,25 @@ struct Cli {
 enum Commands {
     /// 将版本部署至预发布/灰度环境，进入 Staged 状态
     Stage {
-        #[arg(short = 'V', long)]
+        #[arg(short = 'v', long)]
         version: String,
-        #[arg(long, default_value = "")]
-        reason: String,
     },
     /// 将 Staged 版本正式发布上线
     Publish {
-        #[arg(short = 'V', long)]
+        #[arg(short = 'v', long)]
         version: String,
-        #[arg(long, default_value = "CHANGELOG.md")]
-        changelog: String,
         #[arg(long, short = 'y')]
         yes: bool,
     },
     /// 取消 Staged 版本的发布
     Cancel {
-        #[arg(short = 'V', long)]
+        #[arg(short = 'v', long)]
         version: String,
-        #[arg(long, default_value = "")]
-        reason: String,
     },
     /// 将已上线的版本标记为退役
     Retire {
-        #[arg(short = 'V', long)]
+        #[arg(short = 'v', long)]
         version: String,
-        #[arg(long, default_value = "")]
-        reason: String,
     },
 }
 
@@ -54,24 +46,17 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Stage { version, reason } => {
-            qtcloud_devops_code::commands::stage::run(&version, &reason, &repo_path())
+        Commands::Stage { version } => {
+            qtcloud_devops_code::commands::stage::run(&version, &repo_path())
         }
-        Commands::Publish {
-            version,
-            changelog,
-            yes,
-        } => qtcloud_devops_code::commands::publish::run(
-            &version,
-            &PathBuf::from(&changelog),
-            &repo_path(),
-            yes,
-        ),
-        Commands::Cancel { version, reason } => {
-            qtcloud_devops_code::commands::cancel::run(&version, &reason, &repo_path())
+        Commands::Publish { version, yes } => {
+            qtcloud_devops_code::commands::publish::run(&version, &repo_path(), yes)
         }
-        Commands::Retire { version, reason } => {
-            qtcloud_devops_code::commands::retire::run(&version, &reason, &repo_path())
+        Commands::Cancel { version } => {
+            qtcloud_devops_code::commands::cancel::run(&version, &repo_path())
+        }
+        Commands::Retire { version } => {
+            qtcloud_devops_code::commands::retire::run(&version, &repo_path())
         }
     };
 

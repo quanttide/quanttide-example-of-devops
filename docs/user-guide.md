@@ -34,8 +34,7 @@ qtcloud-devops <COMMAND> [选项]
 ### stage — 标记版本
 
 ```bash
-qtcloud-devops stage -V v1.0.0
-qtcloud-devops stage -V v1.0.0 --reason "fix: 登录模块重构"
+qtcloud-devops stage -v v1.0.0
 ```
 
 - 版本号必须符合 `vX.Y.Z` 或 `pkg/vX.Y.Z` 格式
@@ -45,9 +44,8 @@ qtcloud-devops stage -V v1.0.0 --reason "fix: 登录模块重构"
 ### publish — 发布上线
 
 ```bash
-qtcloud-devops publish -V v1.0.0
-qtcloud-devops publish -V v1.0.0 -y   # 跳过确认
-qtcloud-devops publish -V v1.0.0 --changelog docs/CHANGELOG.md
+qtcloud-devops publish -v v1.0.0
+qtcloud-devops publish -v v1.0.0 -y   # 跳过确认
 ```
 
 - 仅允许 Staged → Published 转换
@@ -57,8 +55,7 @@ qtcloud-devops publish -V v1.0.0 --changelog docs/CHANGELOG.md
 ### cancel — 取消发布
 
 ```bash
-qtcloud-devops cancel -V v1.0.0
-qtcloud-devops cancel -V v1.0.0 --reason "暂缓发布"
+qtcloud-devops cancel -v v1.0.0
 ```
 
 - 仅允许 Staged → Cancelled 转换
@@ -67,8 +64,7 @@ qtcloud-devops cancel -V v1.0.0 --reason "暂缓发布"
 ### retire — 退役版本
 
 ```bash
-qtcloud-devops retire -V v1.0.0
-qtcloud-devops retire -V v1.0.0 --reason "EOL"
+qtcloud-devops retire -v v1.0.0
 ```
 
 - 仅允许 Published → Retired 转换
@@ -76,12 +72,7 @@ qtcloud-devops retire -V v1.0.0 --reason "EOL"
 
 ## 数据存储
 
-所有操作记录保存在 `.qtcloud/` 目录下：
-
-| 文件 | 格式 | 用途 |
-|------|------|------|
-| `releases.json` | JSON | 当前所有发布的快照 |
-| `release-events.jsonl` | JSONL | 每次状态变更的追加事件日志 |
+所有操作追加记录到 `.quanttide/devops/release-journal.jsonl`（JSONL 格式）。启动时回放事件重建当前状态。
 
 ## 故障排除
 

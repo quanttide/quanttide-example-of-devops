@@ -14,8 +14,7 @@
 ### 2. 状态持久化
 
 - [x] `Storage` trait：`save(attempt)`, `load(version) -> Option<ReleaseAttempt>`, `list() -> Vec<ReleaseAttempt>`
-- [x] `FileStorage` 实现：JSON 文件存储，路径 `.qtcloud/releases.json`
-- [x] 事件溯源：每次转换追加记录到 `.qtcloud/release-events.jsonl`
+- [x] `FileStorage` 实现：事件溯源模式，单文件 `.quanttide/devops/release-journal.jsonl`（JSONL），启动时回放重建内存状态
 - [x] 单元测试：持久化读写 + 事件追加
 
 ### 3. `stage <version>` 命令

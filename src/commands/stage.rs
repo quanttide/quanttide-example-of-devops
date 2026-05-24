@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::model::release::{FileStorage, ReleaseAttempt, ReleaseStatus, Storage};
 
-pub fn run(version: &str, reason: &str, repo_path: &Path) -> Result<String, Box<dyn std::error::Error>> {
+pub fn run(version: &str, repo_path: &Path) -> Result<String, Box<dyn std::error::Error>> {
     if !crate::commands::release::validate_version(version) {
         return Err(format!("版本号格式错误: {}", version).into());
     }
@@ -21,7 +21,6 @@ pub fn run(version: &str, reason: &str, repo_path: &Path) -> Result<String, Box<
                     .unwrap_or_default()
                     .as_secs()
                     .to_string();
-                updated.reason = reason.to_string();
                 storage.save(&updated)?;
                 return Ok(updated.id);
             }
@@ -32,7 +31,7 @@ pub fn run(version: &str, reason: &str, repo_path: &Path) -> Result<String, Box<
         }
     }
 
-    let attempt = ReleaseAttempt::new(version, reason);
+    let attempt = ReleaseAttempt::new(version, "");
     storage.save(&attempt)?;
     println!("✓ 版本 {} 已进入 Staged 状态 (发布尝试 ID: {})", version, attempt.id);
     Ok(attempt.id)
@@ -46,7 +45,7 @@ mod tests {
     #[test]
     fn test_stage_new_version() {
         let dir = tempfile::tempdir().unwrap();
-        let id = run("v1.0.0", "initial", dir.path()).unwrap();
+        let id = run("v1.0.0", dir.path()).unwrap();
         assert!(!id.is_empty());
 
         let storage = FileStorage::new(dir.path());
@@ -57,7 +56,7 @@ mod tests {
     #[test]
     fn test_stage_invalid_version() {
         let dir = tempfile::tempdir().unwrap();
-        let result = run("bad", "test", dir.path());
+        let result = run("bad", dir.path());
         assert!(result.is_err());
     }
 
@@ -69,7 +68,7 @@ mod tests {
         a.status = ReleaseStatus::Published;
         storage.save(&a).unwrap();
 
-        let result = run("v1.0.0", "", dir.path());
+        let result = run("v1.0.0", dir.path());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("已发布"));
     }
@@ -86,7 +85,7 @@ mod tests {
             storage.save(&a).unwrap();
         }
 
-        let id = run("v1.0.0", "retry", dir.path()).unwrap();
+        let id = run("v1.0.0", dir.path()).unwrap();
         assert!(!id.is_empty());
 
         let storage = FileStorage::new(dir.path());
@@ -103,7 +102,7 @@ mod tests {
         a.status = ReleaseStatus::Retired;
         storage.save(&a).unwrap();
 
-        let result = run("v1.0.0", "", dir.path());
+        let result = run("v1.0.0", dir.path());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("退役"));
     }
@@ -111,9 +110,9 @@ mod tests {
     #[test]
     fn test_stage_idempotent_refresh() {
         let dir = tempfile::tempdir().unwrap();
-        let id1 = run("v1.0.0", "first", dir.path()).unwrap();
+        let id1 = run("v1.0.0", dir.path()).unwrap();
 
-        let id2 = run("v1.0.0", "refresh", dir.path()).unwrap();
+        let id2 = run("v1.0.0", dir.path()).unwrap();
         assert_eq!(id1, id2);
 
         let storage = FileStorage::new(dir.path());

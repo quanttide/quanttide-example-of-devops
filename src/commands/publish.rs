@@ -4,7 +4,6 @@ use crate::model::release::{FileStorage, ReleaseStatus, Storage};
 
 pub fn run(
     version: &str,
-    changelog_path: &Path,
     repo_path: &Path,
     yes: bool,
 ) -> Result<String, Box<dyn std::error::Error>> {
@@ -33,7 +32,8 @@ pub fn run(
     }
     println!("✓ 标签 {} 已创建并推送", version);
 
-    let notes = crate::commands::release::extract_notes(version, changelog_path);
+    let changelog_path = repo_path.join("CHANGELOG.md");
+    let notes = crate::commands::release::extract_notes(version, &changelog_path);
 
     if let Some(repo) = crate::commands::release::get_remote_repo() {
         let release_ok =
@@ -67,8 +67,7 @@ mod tests {
     #[test]
     fn test_publish_not_staged() {
         let dir = tempfile::tempdir().unwrap();
-        let changelog = dir.path().join("CHANGELOG.md");
-        std::fs::write(&changelog, "## [1.0.0]\n\ncontent").unwrap();
+        std::fs::write(dir.path().join("CHANGELOG.md"), "## [1.0.0]\n\ncontent").unwrap();
 
         {
             let mut storage = FileStorage::new(dir.path());
@@ -77,16 +76,15 @@ mod tests {
             storage.save(&a).unwrap();
         }
 
-        let result = run("v1.0.0", &changelog, dir.path(), true);
+        let result = run("v1.0.0", dir.path(), true);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_publish_attempt_not_found() {
         let dir = tempfile::tempdir().unwrap();
-        let changelog = dir.path().join("CHANGELOG.md");
-        std::fs::write(&changelog, "## [1.0.0]\n\ncontent").unwrap();
-        let result = run("v1.0.0", &changelog, dir.path(), true);
+        std::fs::write(dir.path().join("CHANGELOG.md"), "## [1.0.0]\n\ncontent").unwrap();
+        let result = run("v1.0.0", dir.path(), true);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("请先执行 stage"));
     }
@@ -94,13 +92,12 @@ mod tests {
     #[test]
     fn test_publish_user_cancels() {
         let dir = tempfile::tempdir().unwrap();
-        let changelog = dir.path().join("CHANGELOG.md");
-        std::fs::write(&changelog, "## [1.0.0]\n\ncontent").unwrap();
+        std::fs::write(dir.path().join("CHANGELOG.md"), "## [1.0.0]\n\ncontent").unwrap();
 
         let mut storage = FileStorage::new(dir.path());
         storage.save(&ReleaseAttempt::new("v1.0.0", "test")).unwrap();
 
-        let result = run("v1.0.0", &changelog, dir.path(), false);
+        let result = run("v1.0.0", dir.path(), false);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("取消"));
 
