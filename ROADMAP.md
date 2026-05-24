@@ -1,51 +1,32 @@
 # ROADMAP — 软件发布生命周期管理
 
-examples/default 实现量潮发布规范的参考示例。当前版本基于状态机的发布生命周期管理 CLI。
+examples/default 实现量潮发布规范的参考示例。
 
-## 已完成
+## Iter 1：状态机核心命令 ✓
 
-### Iter 0：CLI 脚手架
+`stage` / `publish` / `cancel` / `retire` 四个命令 + 事件溯源持久化。
 
-- `release` 单步命令（已废弃）
-- clap 参数骨架
+详见 [已完成交付物](#)。
 
-### Iter 1：状态机核心命令
+## Iter 2：开发辅助命令（当前）
 
-**状态定义**
+从平台仓库 `apps/qtcloud-devops` 的开发设计文档提取，在实验室实现原型。
 
-```
-[*] → Staged : stage
-Staged → Published : publish
-Staged → Cancelled : cancel
-Cancelled → Staged : stage
-Published → Retired : retire
-Retired → [*]
-```
+| 命令 | 设计文档 | 说明 |
+|------|---------|------|
+| `release status` | `docs/dev/release-status.md` | 从 journal 查询发布状态 |
+| `plan` | `docs/dev/plan.md` | 扫描 BUGS/ROADMAP/TODO 等生成摘要 |
+| `build` | `docs/dev/build.md` | 统一构建入口（cargo build / maturin build） |
+| `test` | `docs/dev/test.md` | 统一测试入口（cargo test） |
 
-**交付物**
+设计风格：
+- Rust 实现
+- 状态驱动 / 原子操作
+- 与现有 `stage`/`publish`/`cancel`/`retire` 一致的 CLI 接口
 
-- `src/model/release.rs` — ReleaseStatus / ReleaseRecord / ReleaseEntry / Storage / FileStorage
-- `src/commands/stage.rs` — stage 命令
-- `src/commands/publish.rs` — publish 命令
-- `src/commands/cancel.rs` — cancel 命令
-- `src/commands/retire.rs` — retire 命令
-- `src/commands/release.rs` — 工具函数（validate_version, create_tag, extract_notes 等）
-- `docs/user-guide.md` — 用户文档
-- `docs/roadmap/specification/release.md` — 建模报告
-- 事件溯源：`.quanttide/devops/release-journal.jsonl`
-- 67 测试，全部通过
+## P2 — 体验增强（优先级后置）
 
-## 待规划
-
-### P1 — 体验增强
-
-- [ ] `list` 命令：列出所有发布记录及其状态
-- [ ] `status <version>` 命令：查询单个版本状态
-- [ ] `--dry-run` 支持所有命令
-- [ ] `--json` 输出格式
-
-### P2 — 灰度与编排
-
-- [ ] `stage --ratio <0.0-1.0>` 灰度比例参数
-- [ ] Hotfix 编排脚本
-- [ ] CI 集成插件（GitHub Action）
+- `--dry-run` 支持所有命令
+- `--json` 输出格式
+- `stage --ratio <0.0-1.0>` 灰度比例参数
+- 审计日志彩色输出（`--verbose`）

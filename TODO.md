@@ -1,97 +1,51 @@
-# TODO — 软件发布生命周期管理
+# TODO
 
-## Iter 1：状态机核心命令 ✓
+## Iter 2：开发辅助命令
 
-### 1. 新建 `src/model/release.rs`
+参考 `apps/qtcloud-devops/src/cli/docs/dev/` 下的设计文档实现。
 
-- [x] `ReleaseStatus` 枚举：`Staged`, `Published`, `Cancelled`, `Retired`
-- [x] `ReleaseAttempt` 结构体：id (UUID), version, status, created_at, updated_at, reason
-- [x] `TransitionError` 枚举：非法状态转换校验
-- [x] `validate_transition(from: &ReleaseStatus, to: &ReleaseStatus) -> Result<()>` 函数
-- [x] 单元测试：所有合法/非法转换路径
-- [x] 单元测试：状态 `Debug + Clone + PartialEq`
+### 1. `release status` 命令
 
-### 2. 状态持久化
+设计文档：`docs/dev/release-status.md`
 
-- [x] `Storage` trait：`save(attempt)`, `load(version) -> Option<ReleaseAttempt>`, `list() -> Vec<ReleaseAttempt>`
-- [x] `FileStorage` 实现：事件溯源模式，单文件 `.quanttide/devops/release-journal.jsonl`（JSONL），启动时回放重建内存状态
-- [x] 单元测试：持久化读写 + 事件追加
+- [ ] 从 `release-journal.jsonl` 读取发布记录
+- [ ] 输出：当前版本号、最新发布记录、预发布版本列表
+- [ ] 支持 `--json` 输出格式
+- [ ] 单元测试
 
-### 3. `stage <version>` 命令
+### 2. `plan` 命令
 
-- [x] `src/commands/stage.rs` — `run(version, reason) -> Result<String>`
-- [x] 前置条件：版本未 `Published`（`Published` 拒绝）
-- [x] 已 `Cancelled` 时复用现有记录（不产生新尝试 ID）
-- [x] 已 `Staged` 时视为刷新部署（幂等）
-- [x] 生成发布尝试 ID（UUID v4）
-- [x] 调用 `Storage::save()` 持久化
-- [x] CLI 注册：`qtcloud-devops-code stage <version> [--reason <reason>]`
+设计文档：`docs/dev/plan.md`
 
-### 4. `publish <version>` 命令
+- [ ] 扫描 BUGS.md / ROADMAP.md / TODO.md 等项目管理文件
+- [ ] 输出：BUGS 数量与分布、迭代进度、TODO 完成统计
+- [ ] 只读，不修改任何文件
+- [ ] 单元测试
 
-- [x] `src/commands/publish.rs` — `run(version) -> Result<String>`
-- [x] 前置条件：版本必须 `Staged`
-- [x] 执行 GitHub Release（复用现有 `create_release` + `create_tag`）
-- [x] 状态变更为 `Published`，持久化
-- [x] 不可逆：成功后不可 `cancel` 或退回
-- [x] CLI 注册：`qtcloud-devops-code publish <version>`
+### 3. `build` 命令
 
-### 5. `cancel <version>` 命令
+设计文档：`docs/dev/build.md`
 
-- [x] `src/commands/cancel.rs` — `run(version) -> Result<String>`
-- [x] 前置条件：版本必须 `Staged`
-- [x] 回滚行为：删除远程 tag（`rollback_tag`） + 删除 GitHub Release（`gh release delete`）
-- [x] 状态变更为 `Cancelled`，持久化
-- [x] CLI 注册：`qtcloud-devops-code cancel <version> --reason <reason>`
+- [ ] 运行 `cargo build`（Rust 构建）
+- [ ] 输出构建结果和错误信息
+- [ ] 支持 `--release` 参数
+- [ ] 单元测试
 
-### 6. `retire <version>` 命令
+### 4. `test` 命令
 
-- [x] `src/commands/retire.rs` — `run(version) -> Result<String>`
-- [x] 前置条件：版本必须 `Published`
-- [x] 仅标记状态，不删除制品
-- [x] 状态变更为 `Retired`，持久化
-- [x] 不可逆：退役后只能通过 hotfix 发布新版本
-- [x] CLI 注册：`qtcloud-devops-code retire <version> --reason <reason>`
+设计文档：`docs/dev/test.md`
 
-### 7. 修改 `src/main.rs`
+- [ ] 运行 `cargo test`
+- [ ] 输出：总数 / 通过 / 失败 / 跳过
+- [ ] 列出失败用例
+- [ ] 支持 `--name <pattern>` 过滤
+- [ ] 单元测试
 
-- [x] 删除 `Commands::Release`（被 `stage+publish+cancel+retire` 替代）
-- [x] 注册 `Commands::Stage`, `Commands::Publish`, `Commands::Cancel`, `Commands::Retire`
-- [x] 错误处理：状态转换失败时输出清晰错误信息
+---
 
-### 8. 修改 `src/lib.rs`
+## P2 — 体验增强（优先级后置）
 
-- [x] `pub mod model;`
-
-### 9. 集成测试
-
-- [x] `test_stage_publish_flow` — stage → publish 完整流程（publish 测试）
-- [x] `test_stage_cancel_flow` — stage → cancel 流程（cancel 测试）
-- [x] `test_publish_from_non_staged_rejected` — 非 Staged 状态 publish 拒绝
-- [x] `test_cancel_from_non_staged_rejected` — 非 Staged 状态 cancel 拒绝
-- [x] `test_retire_from_published` — Published → Retired
-- [x] `test_retire_from_non_published_rejected` — 非 Published 状态 retire 拒绝
-- [x] `test_stage_already_published_rejected` — 已 Published 版本重新 stage 拒绝
-- [x] `test_stage_idempotent` — Staged 重复 stage 视为刷新（不产生新 ID）
-- [x] `test_cancelled_can_restage` — Cancelled 后可重新 stage
-
-### 10. 编译验证
-
-- [x] `cargo build` 通过
-- [x] `cargo test` 全部通过（61 tests）
-- [x] `cargo clippy -- -D warnings` 通过
-
-## P1 — 增强
-
-- [ ] 审计日志彩色输出（`--verbose`）
-- [ ] `list` 命令：列出所有发布记录及其状态
-- [ ] `status <version>` 命令：查询单个版本状态
 - [ ] `--dry-run` 支持所有命令
-- [ ] `--json` 输出格式
-- [ ] GitHub Release notes 从 `stage` 时注册的 changelog 自动生成
-
-## P2 — 灰度与编排
-
+- [ ] `--json` 输出格式（`stage`/`publish` 已有，推广到全部命令）
 - [ ] `stage --ratio <0.0-1.0>` 灰度比例参数
-- [ ] Hotfix 编排脚本
-- [ ] CI 集成插件（GitHub Action）
+- [ ] 审计日志彩色输出（`--verbose`）
