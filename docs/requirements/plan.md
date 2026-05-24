@@ -2,7 +2,7 @@
 
 ## 需求来源
 
-本对话中管理了多个规划文件：ROADMAP.md、TODO.md、CHANGELOG.md、BUGS.md、AGENTS.md。没有工具汇总这些信息。
+本对话中管理了多个规划文件：ROADMAP.md、TODO.md、CHANGELOG.md、BUGS.md。没有工具汇总这些信息。
 
 ## 场景
 
