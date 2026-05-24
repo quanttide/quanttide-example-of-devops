@@ -1,153 +1,63 @@
-# [已废弃] Git Submodule 专用编辑器 — 迭代计划
+# ROADMAP — Release 命令
 
-> 此项目已迁移至 `apps/qtcloud-devops/src/cli/packages/code/`，通过 `qtcloud-devops code` 子命令使用。
-> 本文件仅作存档。
+## 已完成
 
-## 已完成迭代
+| 迭代 | 交付 |
+|------|------|
+| Iter 0-9 | CLI 脚手架 + `code status/sync/retire` 子命令 + 测试 |
 
-| 迭代 | 提交 | 交付 |
-|------|------|------|
-| Iter 0-8 | 22 个提交 | CLI + Tauri + PyO3 + 全部测试通过 |
+## 待规划 P0 — Release 命令
 
----
-
-## Iteration 9：命令清理与核心价值聚焦
+参考 `apps/qtcloud-devops/src/cli/` 中 `release.py` + `cli.py` 的设计，在 examples/default 的 Rust CLI 中实现等价的 `release` 子命令。
 
 ### 动机
 
-70% 的 CLI 命令是 `git` 命令的 Rust 翻译版。本质上就是：
+当前 `code` 子命令管理 Git 子模块生命周期，但缺少发布（tag + GitHub Release）能力。`release` 子命令补齐 DevOps 闭环。
 
-```rust
-// 例如 add_submodule:
-std::process::Command::new("git")
-    .args(["submodule", "add", ...])
-    .output()
-```
-
-这类包装没有建模层面的新贡献，只是把 shell 命令搬到了 Rust 里。保留它们会增加维护成本（git2 API 版本兼容问题已有前车之鉴），且对用户来说仍然是学会了一个新工具，不是学会了一个新概念。
-
-真正的新贡献只有三块：
-
-| 贡献 | 说明 |
-|------|------|
-| `RepoState::scan()` + 7 种状态分类 | 三路 commit 比对，`git submodule status` 做不到 |
-| `sync_to_parent` | 子模块 → 父仓库指针更新的原子操作，git 没有这条命令 |
-| `retire_submodule`（半个） | `git submodule deinit` 后的 `.gitmodules` + index 清理自动化 |
-
-### 9.1 移除无新贡献的命令
-
-| 命令 | 原因 | 替代方案 |
-|------|------|----------|
-| `kse add <url> <path>` | 纯 `git submodule add` 包装 | `git submodule add <url> <path>` |
-| `kse init` | 纯 `git submodule init` 循环 | `git submodule update --init` |
-| `kse update <name>` | 纯 `git submodule update --remote` 包装 | `git submodule update --remote <name>` |
-| `kse update-all` | 同上，批量版 | `git submodule update --recursive --remote` |
-| `kse checkout <name> <branch>` | 纯 `git checkout` 包装 | `git -C <path> checkout <branch>` |
-| `kse branch <name> <branch>` | 纯 `git checkout -b` 包装 | `git -C <path> checkout -b <branch>` |
-| `kse checkout-all <branch>` | 批量版，同上 | shell 循环 |
-| `kse branch-all <branch>` | 批量版，同上 | shell 循环 |
-
-### 9.2 保留并聚焦的命令
-
-| 命令 | 状态 |
-|------|------|
-| `kse status [path]`（原 `health-check`） | 核心贡献，保留并重命名 |
-| `kse sync parent <name>`（原 `sync`） | 核心贡献，保留并纳入 sync 族 |
-| `kse sync parent --all`（原 `sync-all`） | 核心贡献，保留 |
-| `kse retire <name>` | 半贡献，保留 |
-| `kse history [--limit] [--submodule] [--start] [--end]` | 保留 |
-| `kse export-ci [-f format]` | 保留（CI 与 devops 集成相关） |
-
-### 9.3 `health-check` → `status` 重命名
-
-| 现名 | 新名 |
-|------|------|
-| `kse health-check` | `kse status` |
-| `health_check()` trait 方法 | `status()` |
-| Tauri command `health_check` | `status` |
-
-`kse health-check` 保留为隐藏 alias，输出迁移提示。
-
-### 9.4 `sync` 命令族
-
-| 新命令 | 原身 | 方向 |
-|--------|------|------|
-| `kse sync parent <name>` | `kse sync <name>` | 子模块 → 父仓库（核心贡献） |
-| `kse sync parent --all` | `kse sync-all` | 批量版 |
-| `kse sync platform <name> --env <env>` | 新增 | 跨环境子模块版本对齐（CI 场景） |
-
-`kse sync` 保留为 `kse sync parent` 的快捷别名。
-
-### 9.5 清理后 CLI 命令集
+### 功能规格
 
 ```
-qtcloud-devops code status [path]                    # 扫描状态 + 聚合统计（核心贡献）
-qtcloud-devops code sync parent [name]               # 子模块 → 父仓库指针同步（核心贡献）
-qtcloud-devops code sync platform <name> --env <env> # 跨环境版本对齐（CI 场景）
-qtcloud-devops code retire <name>                    # 退役子模块
-qtcloud-devops code history [...]                    # 操作历史
-qtcloud-devops code export-ci [...]                  # 导出 CI 脚本
-# 所有命令支持 --dry-run 预览
+qtcloud-devops-code release --version <VERSION> [OPTIONS]
 ```
 
-从 14 个子命令精简为 6 个子命令，全部指向核心贡献。
+| Flag | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `--version` / `-V` | String | 必填 | 版本号（如 `v0.1.0` 或 `pkg/v0.1.0`） |
+| `--changelog` | Path | `CHANGELOG.md` | CHANGELOG 路径 |
+| `--dry-run` | bool | false | 仅检查，不执行 |
+| `--tag-only` | bool | false | 仅打标签，跳过 GitHub Release |
+| `--release-only` | bool | false | 仅 GitHub Release（tag 必须已存在） |
+| `--yes` / `-y` | bool | false | 跳过确认提示 |
 
-### 9.6 受影响文件
+### 行为
 
-| 文件 | 变更 |
-|------|------|
-| `src/commands/mod.rs` | trait: 移除 add/init/update/checkout/branch，health_check→status |
-| `src/commands/editor.rs` | 移除对应实现，status 替代 health_check，sync_parent/sync_platform 实现 |
-| `src/main.rs` | CLI: 移除 8 个子命令，重命名，新增 sync platform |
-| `src-tauri/src/main.rs` | Tauri commands: 移除 5 个，重命名 |
-| `web-ui/index.html` | 移除无用按钮，sync 族重排 |
-| `web-ui/src/app.js` | 移除无用 invoke 调用 |
-| `tests/integration.rs` | 移除对已删除命令的测试 |
-| `docs/user-guide.md` | 全部重写 |
-| `docs/dev.md` | 更新 trait 定义 |
+1. **预检查**：版本格式、CHANGELOG 存在且含对应条目、工作区干净、在 main/master/release 分支
+2. **提取 Release Notes**：从 CHANGELOG.md 解析 `## [{ver}]` 段落
+3. **确认**：展示版本+Release Notes 预览，等待用户确认（`-y` 跳过）
+4. **执行**：
+   - 创建 Git tag → `git tag <version>`
+   - 推送 tag → `git push origin <version>`
+   - GitHub Release → `gh release create <version> --title <version> --notes <notes>`
+5. **回滚**：GitHub Release 失败时自动删除已推送的 tag
 
-### 9.7 任务分解
+### 实现方案
 
-| 任务 | 预估 |
-|------|------|
-| 9.1 trait + 实现清理（commands/mod.rs + editor.rs） | 0.3d |
-| 9.2 CLI 清理 + 重命名（main.rs） | 0.2d |
-| 9.3 Tauri command 清理（src-tauri） | 0.1d |
-| 9.4 Web UI 清理（index.html + app.js） | 0.1d |
-| 9.5 sync platform 子命令骨架 | 0.2d |
-| 9.6 测试更新 + 编译验证 | 0.3d |
-| 9.7 文档（user-guide.md + dev.md） | 0.3d |
+纯 Rust 实现（`std::process::Command` 调用 git/gh），无需额外依赖。结构：
 
----
+| 文件 | 新增/修改 | 内容 |
+|------|-----------|------|
+| `src/commands/mod.rs` | 修改 | trait 新增 `release` 相关方法 |
+| `src/commands/release.rs` | **新增** | `ReleaseEditor`、precheck、extract_notes、confirm、create_tag、push_tag、create_release、rollback |
+| `src/main.rs` | 修改 | CLI 注册 `release` 子命令 |
+| `tests/integration.rs` | 修改 | 新增 release 相关集成测试 |
 
-## 清理前 vs 清理后
+### 基本假设
 
-```
-清理前 (14 子命令):                             清理后 (6 子命令):
-  add              →   git submodule add         status 👈 核心
-  init             →   git submodule init        sync parent 👈 核心
-  update           →   git submodule update       sync platform 👈 新增
-  update-all       →   同上 (批量)                retire
-  checkout         →   git checkout              history
-  branch           →   git checkout -b           export-ci
-  checkout-all     →   同上 (批量)
-  branch-all       →   同上 (批量)
-  sync             →   🏆 核心贡献 ← 保留
-  sync-all         →   🏆 核心贡献 ← 保留
-  retire           →   🏆 半贡献 ← 保留
-  health-check     →   🏆 核心贡献 ← 重命名
-  history          →   保留
-  export-ci        →   保留
-```
-
----
-
-## 待完成（需本地环境）
-
-| 任务 | 命令 |
-|------|------|
-| Iter 9 编译验证 | `cargo build && cargo test && cargo clippy -- -D warnings` |
-| CI 触发验证 | `git push origin main` |
-| GitHub Release | `gh release create v1.0.0 ...` |
-
-详细开发蓝图见 [docs/dev.md](docs/dev.md)。
+- 使用 GitHub 托管仓库
+- `gh` CLI 已安装且已认证
+- CHANGELOG.md 使用 Keep a Changelog 格式
+- 版本号为 semver（前缀 v 或 `pkg/v`）
+- 工作区必须干净
+- 仅在 main / master / release/* 分支上发布
+- git remote origin 可访问
+- TTY 交互式环境（`--yes` 参数可跳过）

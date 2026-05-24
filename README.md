@@ -1,108 +1,8 @@
-# [已废弃] quanttide-example-of-devops — KSE (Git Submodule Editor)
+# quanttide-example-of-devops — Release 发布管理 CLI
 
-> **此仓库已废弃**，Rust 核心代码已迁移至 `apps/qtcloud-devops/src/cli/packages/code/`。
-> 请使用 `qtcloud-devops code` 子命令替代 `kse` CLI。
-> 迁移后安装：`pip install -e apps/qtcloud-devops/src/cli/packages/code`
-
-量潮DevOps实验室 — 多仓库项目的子模块可视化工具（已存档）。
-
-## 安装
-
-### 前置依赖
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install libgit2-dev
-
-# macOS
-brew install libgit2
-```
-
-### 从源码构建
-
-```bash
-git clone <repo-url>
-cd examples/default
-cargo build --release
-# 二进制位于 target/release/kse
-```
-
-### Tauri 桌面应用
-
-```bash
-cargo install tauri-cli
-cargo tauri dev     # 开发模式
-cargo tauri build   # 构建安装包
-```
-
-## 撤销操作
-
-KSE 的每个原子操作都通过 Git 的 reflog 记录，可以通过以下方式撤销：
-
-```bash
-# 查看父仓库 reflog
-git reflog
-
-# 恢复到操作前的状态
-git reset --hard HEAD@{1}
-```
-
-对于子模块内部的操作：
-
-```bash
-cd <子模块路径>
-git reflog
-git reset --hard HEAD@{1}
-```
-
-> 建议在操作前确保工作区干净（无未提交修改），以便可以安全地通过 `git reset --hard` 回退。
-
-## 使用
-
-### 健康检查
-
-```bash
-kse health-check [路径]
-# 默认当前目录，输出每个子模块的名称、状态和跟踪分支
-```
-
-### 子模块管理
-
-```bash
-kse add <url> <path> -b main                     # 添加子模块
-kse init                                          # 初始化所有
-kse update <name> -s fast-forward                 # 更新单个
-kse update-all -s merge                           # 批量更新
-kse sync <name>                                   # 同步到父仓库
-kse sync-all                                      # 全部同步
-kse checkout <name> <branch>                      # 切换分支
-kse branch <name> <new-branch>                    # 创建分支
-kse retire <name>                                 # 退役子模块
-```
-
-### 预览模式（不执行）
-
-```bash
-kse --dry-run update <name>
-kse --dry-run sync-all
-```
-
-### 操作历史
-
-```bash
-kse history                          # 最近 20 条
-kse history -n 50                    # 最近 50 条
-kse history -m <submodule-name>      # 按子模块筛选
-```
-
-### 导出 CI 脚本
-
-```bash
-kse export-ci                       # 输出 shell 脚本
-kse export-ci -f github             # GitHub Actions
-kse export-ci -f gitlab             # GitLab CI
-kse export-ci -f shell -o script.sh # 写入文件
-```
+> 本示例项目演示了 `release` 命令的设计与实现。
+> 原 Git 子模块管理代码（`code status/sync/retire`）已迁移至 `apps/qtcloud-devops/src/cli/`。
+> 参考实现：`apps/qtcloud-devops/src/cli/src/qtcloud_devops_cli/release.py`
 
 ## 开发
 
@@ -110,26 +10,14 @@ kse export-ci -f shell -o script.sh # 写入文件
 cargo build                    # 编译
 cargo test                     # 运行测试
 cargo clippy -- -D warnings    # 代码检查
-cargo fmt                      # 格式化
 ```
 
-## 架构
+## 用法
 
+```bash
+qtcloud-devops-code release --version v0.1.0                   # 标签 + GitHub Release
+qtcloud-devops-code release --version v0.1.0 --tag-only        # 仅创建 Git 标签
+qtcloud-devops-code release --version v0.1.0 --release-only    # 仅创建 GitHub Release
+qtcloud-devops-code release --version v0.1.0 --dry-run         # 仅检查
+qtcloud-devops-code release --version v0.1.0 -y                # 跳过确认
 ```
-src/
-├── lib.rs              # 共享库入口
-├── main.rs             # CLI 二进制
-├── model/
-│   └── mod.rs          # Submodule, SubmoduleStatus, RepoState
-└── commands/
-    ├── mod.rs          # SubmoduleEditor trait, UpdateStrategy
-    ├── editor.rs       # GitSubmoduleEditor 实现
-    ├── history.rs      # SQLite 操作历史
-    └── export.rs       # CI 脚本导出
-src-tauri/              # Tauri 桌面壳
-web-ui/                 # 前端仪表盘
-```
-
-## 许可证
-
-MIT
