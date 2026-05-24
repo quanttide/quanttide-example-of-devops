@@ -5,7 +5,7 @@
 ## 用法
 
 ```bash
-qtcloud-devops-code plan
+devops plan
 ```
 
 ## 输出

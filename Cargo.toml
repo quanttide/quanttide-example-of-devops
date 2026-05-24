@@ -1,12 +1,12 @@
 [package]
-name = "qtcloud-devops-code"
+name = "devops"
 version = "0.1.0"
 edition = "2021"
-description = "量潮DevOps CLI工具 — Release 发布管理"
+description = "量潮DevOps CLI — 实验室参考实现"
 authors = ["Guo-Zhang <zhangguo@quanttide.com>"]
 
 [[bin]]
-name = "qtcloud-devops-code"
+name = "devops"
 path = "src/main.rs"
 
 [lib]

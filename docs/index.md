@@ -1,6 +1,6 @@
-# qtcloud-devops-code 用户文档
+# devops 用户文档
 
-`qtcloud-devops-code` 是量潮发布规范的参考实现。提供发布管理、开发辅助等命令。
+`devops` 是量潮发布规范的参考实现。提供发布管理、开发辅助等命令。
 
 ## 安装
 

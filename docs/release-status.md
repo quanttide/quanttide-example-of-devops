@@ -5,7 +5,7 @@
 ## 用法
 
 ```bash
-qtcloud-devops-code release-status
+devops release-status
 ```
 
 ## 输出
