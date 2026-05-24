@@ -36,6 +36,8 @@ enum Commands {
         #[arg(short = 'v', long)]
         version: String,
     },
+    /// 查看发布状态
+    ReleaseStatus,
 }
 
 fn repo_path() -> PathBuf {
@@ -47,16 +49,19 @@ fn main() {
 
     let result = match cli.command {
         Commands::Stage { version } => {
-            qtcloud_devops_code::commands::stage::run(&version, &repo_path())
+            qtcloud_devops_code::commands::stage::run(&version, &repo_path()).map(|_| ())
         }
         Commands::Publish { version, yes } => {
-            qtcloud_devops_code::commands::publish::run(&version, &repo_path(), yes)
+            qtcloud_devops_code::commands::publish::run(&version, &repo_path(), yes).map(|_| ())
         }
         Commands::Cancel { version } => {
-            qtcloud_devops_code::commands::cancel::run(&version, &repo_path())
+            qtcloud_devops_code::commands::cancel::run(&version, &repo_path()).map(|_| ())
         }
         Commands::Retire { version } => {
-            qtcloud_devops_code::commands::retire::run(&version, &repo_path())
+            qtcloud_devops_code::commands::retire::run(&version, &repo_path()).map(|_| ())
+        }
+        Commands::ReleaseStatus => {
+            qtcloud_devops_code::commands::release_status::run(&repo_path()).map(|_| ())
         }
     };
 
