@@ -7,7 +7,6 @@
 ## Iter 2：`release status`
 
 设计文档：`../apps/qtcloud-devops/src/cli/docs/dev/release-status.md`
-需求复盘：`docs/requirements/release-status.md`
 
 - [ ] 从 `release-journal.jsonl` 读取发布记录
 - [ ] 输出：当前版本号、最新发布记录、预发布版本列表
@@ -18,7 +17,6 @@
 ## Iter 3：`plan`
 
 设计文档：`../apps/qtcloud-devops/src/cli/docs/dev/plan.md`
-需求复盘：`docs/requirements/plan.md`
 
 - [ ] 扫描 BUGS.md / ROADMAP.md / TODO.md / STATUS.md / CHANGELOG.md
 - [ ] 输出：BUGS 数量与分布、迭代进度、TODO 完成统计
@@ -29,7 +27,6 @@
 ## Iter 4：`build`
 
 设计文档：`../apps/qtcloud-devops/src/cli/docs/dev/build.md`
-需求复盘：`docs/requirements/build.md`
 
 - [ ] 注册 `build` 子命令到 CLI
 - [ ] 检测项目类型，选择对应构建方式
@@ -42,7 +39,6 @@
 ## Iter 5：`test`
 
 设计文档：`../apps/qtcloud-devops/src/cli/docs/dev/test.md`
-需求复盘：`docs/requirements/test.md`
 
 - [ ] 注册 `test` 子命令到 CLI
 - [ ] 检测项目类型，选择对应测试框架
