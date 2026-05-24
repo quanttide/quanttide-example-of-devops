@@ -10,7 +10,7 @@ name = "devops"
 path = "src/main.rs"
 
 [lib]
-name = "qtcloud_devops_code"
+name = "devops"
 path = "src/lib.rs"
 
 [dependencies]
